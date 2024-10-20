@@ -48,7 +48,7 @@ class User:
         peer = Peer(ip, port, info_hash)
         self.peerList.append(peer.peer_id)
 
-        peer.share(file_manager)
+        peer.upload(file_manager)
         self.peerList.remove(peer)
 
     def scrape_tracker(self):

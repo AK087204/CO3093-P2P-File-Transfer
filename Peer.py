@@ -4,7 +4,7 @@ import threading
 import socket
 from PeerHandler import PeerHandler
 from FileManager import FileManager
-TRACKER_PORT = 5050
+TRACKER_PORT = 6969
 TRACKER_HOST = 'localhost'
 EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 
@@ -36,7 +36,7 @@ class Peer:
         respond = self.announce_request("STARTED")
         self.file_manager = FileManager()
 
-    def share(self, file_manager):
+    def upload(self, file_manager):
         self.file_manager = file_manager
         self.start_server()
         respond = self.announce_request("STARTED")
@@ -63,7 +63,7 @@ class Peer:
         server_socket.listen(5)
         while self.is_running:
             conn, addr = server_socket.accept()
-            peer_handler = PeerHandler(conn, addr)
+            peer_handler = PeerHandler(conn, addr, self.info_hash, self.peer_id)
             thread = threading.Thread(target=peer_handler.run)
             thread.start()
 
@@ -72,6 +72,7 @@ class Peer:
         params = {
             'info_hash': self.info_hash,
             'peer_id': self.peer_id,
+            'ip': self.peer_ip,
             'port': self.peer_port,
             'uploaded': str(self.uploaded),
             'downloaded': str(self.downloaded),
