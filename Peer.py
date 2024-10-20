@@ -39,7 +39,8 @@ class Peer:
     def share(self, file_manager):
         self.file_manager = file_manager
         self.start_server()
-        self.request("STARTED")
+        respond = self.request("STARTED")
+        print(respond)
 
     def start_server(self):
         """Khởi chạy server để lắng nghe các yêu cầu từ peer khác."""
