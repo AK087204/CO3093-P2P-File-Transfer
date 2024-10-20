@@ -20,6 +20,7 @@ class Peer:
         params = {
             'info_hash': info_hash,
             'peer_id': self.peer_id,
+            'ip': self.peer_ip,
             'port': self.peer_port,
             'uploaded': str(self.uploaded),
             'downloaded': str(self.downloaded),
@@ -33,6 +34,8 @@ class Peer:
         request = f"GET /announce?{query_string} HTTP/1.1\r\n"
         request += f"Host: {TRACKER_HOST}\r\n"
         request += "Connection: close\r\n\r\n"
+
+        print(request)
 
         # Mở kết nối TCP tới tracker
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

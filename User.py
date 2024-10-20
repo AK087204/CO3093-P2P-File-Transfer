@@ -7,7 +7,8 @@ from Peer import Peer
 import socket
 
 class User:
-    def __init__(self, name:str = "Anonymous"):
+    def __init__(self, userId: str, name:str = "Anonymous"):
+        self.userId = userId
         self.name = name
         self.peerList = []
 
@@ -22,8 +23,10 @@ class User:
             magnet_link = input("Please input magnet link: ")
             info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
 
+        print(info_hash)
         ip, port = self._get_ip_port()
         peer = Peer(ip, port)
+        peer.request(info_hash)
 
 
 
@@ -60,7 +63,7 @@ class User:
         info = InfoMultiFile(piece_length, pieces, os.path.basename(dir_path), files)
 
         # Tạo MetaInfo cho torrent file
-        meta_info = MetaInfo(info, 'http://localhost:8080', datetime.now(), 'No comment', self.name)
+        meta_info = MetaInfo(info, 'http://localhost:5050', datetime.now(), 'No comment', self.name)
         encoded = meta_info.get_bencode()
         TorrentUtils.create_torrent_file(encoded, 'download.torrent')
         magnet_link = TorrentUtils.make_magnet_from_bencode(encoded)
@@ -82,7 +85,7 @@ class User:
         info = InfoSingleFile(piece_length, pieces, file_name, file_size)
 
         # Tạo MetaInfo cho torrent file
-        meta_info = MetaInfo(info, 'http://localhost:8080', datetime.now(), 'No comment', self.name)
+        meta_info = MetaInfo(info, 'http://localhost:5050', datetime.now(), 'No comment', self.name)
         encoded = meta_info.get_bencode()
         TorrentUtils.create_torrent_file(encoded, 'download.torrent')
         magnet_link = TorrentUtils.make_magnet_from_bencode(encoded)
@@ -101,7 +104,8 @@ class User:
             port = s.getsockname()[1]  # Lấy port đã bind
         return ip_address, port
 
-if __name__ == '__main__':
+""" if __name__ == '__main__':
     user = User()
     magnet_link = user.share()
     print("Magnet link:", magnet_link)
+    user.download() """
