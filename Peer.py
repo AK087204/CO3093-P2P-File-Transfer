@@ -68,6 +68,7 @@ class Peer:
         self.event = event_state
         params = {
             'info_hash': self.info_hash,
+            'info_hash': self.info_hash,
             'peer_id': self.peer_id,
             'ip': self.peer_ip,
             'port': self.peer_port,
@@ -76,6 +77,7 @@ class Peer:
             'left': str(self.left),
             'compact': str(self.compact),
             'event': self.event,
+            'event': self.event,
         }
 
         query_string = urllib.parse.urlencode(params)
@@ -83,6 +85,7 @@ class Peer:
         request = f"GET /announce?{query_string} HTTP/1.1\r\n"
         request += f"Host: {TRACKER_HOST}\r\n"
         request += "Connection: close\r\n\r\n"
+        print(request)
         print(request)
         # Mở kết nối TCP tới tracker
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

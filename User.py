@@ -2,6 +2,8 @@ from datetime import datetime
 import os
 
 from FileManager import FileManager
+
+from FileManager import FileManager
 from info import *
 from MetaInfo import MetaInfo
 from TorrentUtils import TorrentUtils
@@ -26,6 +28,9 @@ class User:
 
         print(info_hash)
         ip, port = self._get_ip_port()
+        peer = Peer(ip, port, info_hash)
+        self.peerList.append(peer.peer_id)
+        peer.download()
         peer = Peer(ip, port, info_hash)
         self.peerList.append(peer.peer_id)
         peer.download()
