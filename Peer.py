@@ -6,7 +6,7 @@ from PeerHandler import PeerHandler
 from FileManager import FileManager
 TRACKER_PORT = 5050
 TRACKER_HOST = 'localhost'
-EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED', 'RUNNING']
+EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 
 class Peer:
     def __init__(self, peer_ip, peer_port, info_hash):
@@ -33,13 +33,18 @@ class Peer:
         """
 
         self.start_server()
-        self.request("STARTED")
+        respond = self.announce_request("STARTED")
         self.file_manager = FileManager()
 
     def share(self, file_manager):
         self.file_manager = file_manager
         self.start_server()
-        self.request("STARTED")
+        respond = self.announce_request("STARTED")
+        print(respond)
+
+    def scrape_tracker(self):
+        respond = self.scrape_request()
+        print(respond)
 
     def start_server(self):
         """Khởi chạy server để lắng nghe các yêu cầu từ peer khác."""
@@ -62,7 +67,7 @@ class Peer:
             thread = threading.Thread(target=peer_handler.run)
             thread.start()
 
-    def request(self, event_state):
+    def announce_request(self, event_state):
         self.event = event_state
         params = {
             'info_hash': self.info_hash,
@@ -81,12 +86,23 @@ class Peer:
         request += f"Host: {TRACKER_HOST}\r\n"
         request += "Connection: close\r\n\r\n"
         print(request)
+
+        response = self.send_request(request)
+        return response
+
+    def scrape_request(self):
+        # Mã hóa info_hash
+        encoded_info_hash = urllib.parse.quote(self.info_hash)
+        request = f"GET /scrape?info_hash={encoded_info_hash} HTTP/1.1\r\nHost: {TRACKER_HOST}\r\n\r\n"
+
+        response = self.send_request(request)
+        return response
+
+    def send_request(self, request):
         # Mở kết nối TCP tới tracker
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((TRACKER_HOST, TRACKER_PORT))  # Kết nối đến tracker
-            s.sendall(request.encode('utf-8'))  # Gửi yêu cầu GET
-
-            # Nhận phản hồi từ tracker
+            s.connect((TRACKER_HOST, TRACKER_PORT))
+            s.sendall(request.encode('utf-8'))
             response = b""
             while True:
                 data = s.recv(4096)
@@ -94,5 +110,4 @@ class Peer:
                     break
                 response += data
 
-        # Trả về phản hồi nhận được (dưới dạng chuỗi)
         return response.decode('utf-8')
