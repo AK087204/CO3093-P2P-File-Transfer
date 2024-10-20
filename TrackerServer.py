@@ -61,10 +61,11 @@ class TrackerServer:
             self.update_peer(info_hash, peer_id, completed=True)
 
         # Create and return the response
-        return self.create_response(info_hash)
+        response = self.create_response(info_hash)
+        print(response)
+        return response
 
     def add_peer(self, info_hash: str, peer_id: str, ip: str, port: str, downloaded: str):
-        print(f"Test add_peer {info_hash} {peer_id} {ip} {port} {downloaded}")
         if info_hash not in self.peers:
             self.peers[info_hash] = []
         self.peers[info_hash].append({
@@ -91,7 +92,6 @@ class TrackerServer:
             'tracker_id': self.tracker_id,
             'peers': self.peers.get(info_hash, [])
         }
-        print(json.dumps(response))
         return json.dumps(response)
 
     def create_error_response(self, reason: str) -> str:
