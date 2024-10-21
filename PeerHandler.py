@@ -1,8 +1,10 @@
 import struct
+import threading
+import time
 
 
 class PeerHandler:
-    def __init__(self, conn, addr, info_hash, peer_id):
+    def __init__(self, conn, addr, info_hash, peer_id, callback_function):
         self.conn = conn  # Kết nối socket với peer
         self.addr = addr  # Địa chỉ của peer
         self.am_choking = 1
@@ -11,10 +13,41 @@ class PeerHandler:
         self.peer_interested = 0
         self.info_hash = info_hash  # Hash của torrent để so khớp
         self.peer_id = peer_id  # Peer ID của chính mình
+        self.callback_function = callback_function
+        self.listen_thread = None
+        self.request_thread = None
 
     def run(self):
-        self.two_way_handshake()
+        # Thực hiện hai chiều bắt tay (handshake)
+        if self.two_way_handshake():
+            # Tạo thread lắng nghe các message từ peer
+            self.listen_thread = threading.Thread(target=self.listen)
+            self.listen_thread.start()
 
+            # Tạo thread khác để gửi các yêu cầu request piece khi cần thiết
+            self.request_thread = threading.Thread(target=self.send_requests)
+            self.request_thread.start()
+
+    def listen(self):
+        while True:
+            # Nhận dữ liệu từ peer
+            response = self.conn.recv(1024)
+            if not response:
+                break  # Ngắt kết nối nếu không còn dữ liệu
+            self.handle_message(response)  # Xử lý dữ liệu nhận được từ peer
+
+    def handle_message(self, message):
+        pass
+
+    def send_requests(self):
+        while True:
+            # Lấy thông tin về piece cần tải từ callback
+            piece_index = self.callback_function()
+            if piece_index is not None:
+                self.request_block(piece_index)
+            # Có thể thêm điều kiện để kiểm tra nếu không còn piece nào cần tải thì dừng gửi yêu cầu
+            # Thêm delay hoặc logic khác để tránh việc gửi yêu cầu quá nhiều
+            time.sleep(0.5)
 
     def two_way_handshake(self):
 
@@ -25,15 +58,9 @@ class PeerHandler:
 
         # Phân tích thông điệp handshake nhận được
         if self.parse_handshake(response):
-
-            # Sau khi handshake thành công, gửi thông điệp 'interested'
-            self.send_interested()
-
-            # Chờ peer gửi lại thông điệp 'unchoke' để tiếp tục
-            self.listen_for_unchoke()
-
+            return True
         else:
-            self.conn.close()
+            return False
 
     def parse_handshake(self, response):
         """
@@ -125,9 +152,7 @@ class PeerHandler:
         Gửi thông điệp 'request' để yêu cầu một block từ peer.
         """
         try:
-            index = 0  # Index của piece cần download
-            begin = 0  # Offset trong piece
-            length = 16384  # Độ dài block (16KB)
+            index, begin, length = self.callback_function()
 
             request_msg = struct.pack(">I", 13) + struct.pack("B", 6)  # length (13 bytes) + message id (6)
             request_msg += struct.pack(">I", index)  # Piece index
