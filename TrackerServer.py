@@ -38,30 +38,34 @@ class TrackerServer:
         # Parse the URL and query parameters
         parsed_url = urlparse(full_path)
         params = parse_qs(parsed_url.query)
-        
-        # Extract relevant information
+        request_type = parsed_url.path
+
         info_hash = params.get('info_hash', [None])[0]
-        peer_id = params.get('peer_id', [None])[0]
-        ip = params.get('ip', [None])[0]
-        port = params.get('port', [None])[0]
-        event = params.get('event', [None])[0]
-        downloaded = params.get('downloaded', [None])[0]
 
-        print(f"Test {info_hash} {peer_id} {ip} {port} {event} {downloaded}")
+        if request_type == '/announce':
+            # Extract params
+            peer_id = params.get('peer_id', [None])[0]
+            ip = params.get('ip', [None])[0]
+            port = params.get('port', [None])[0]
+            event = params.get('event', [None])[0]
+            downloaded = params.get('downloaded', [None])[0]
 
-        if not all([info_hash, peer_id, ip, port]):
-            return self.create_error_response("Missing required parameters")
+            print(f"Test {info_hash} {peer_id} {ip} {port} {event} {downloaded}")
 
-        # Handle different events
-        if event == 'STARTED':
-            self.add_peer(info_hash, peer_id, ip, port, downloaded)
-        elif event == 'STOPPED':
-            self.remove_peer(info_hash, peer_id)
-        elif event == 'COMPLETED':
-            self.update_peer(info_hash, peer_id, completed=True)
+            if not all([info_hash, peer_id, ip, port]):
+                return self.create_error_response("Missing required parameters")
+
+            # Handle different events
+            if event == 'STARTED':
+                self.add_peer(info_hash, peer_id, ip, port, downloaded)
+            elif event == 'STOPPED':
+                self.remove_peer(info_hash, peer_id)
+            elif event == 'COMPLETED':
+                self.update_peer(info_hash, peer_id, completed=True)
 
         # Create and return the response
-        response = self.create_response(info_hash)
+        response = self.create_response(info_hash, request_type)
+                
         print(response)
         return response
 
@@ -74,7 +78,6 @@ class TrackerServer:
             'port': port,
             'downloaded': downloaded
         })
-        print(f"Test {self.peers}")
 
     def remove_peer(self, info_hash: str, peer_id: str):
         if info_hash in self.peers:
@@ -87,11 +90,19 @@ class TrackerServer:
                     peer['completed'] = completed
                     break
 
-    def create_response(self, info_hash: str) -> str:
-        response = {
-            'tracker_id': self.tracker_id,
-            'peers': self.peers.get(info_hash, [])
-        }
+    def create_response(self, info_hash: str, type: str) -> str:
+        if type == '/announce':
+            response = {
+                'tracker_id': self.tracker_id,
+                'file_id': info_hash,
+                'peers': self.peers.get(info_hash, [])
+            }
+        elif type == '/scrape':
+            response = {
+                'tracker_id': self.tracker_id,
+                'file_id': info_hash,
+                'total_peers': len(self.peers.get(info_hash, []))
+            }
         return json.dumps(response)
 
     def create_error_response(self, reason: str) -> str:

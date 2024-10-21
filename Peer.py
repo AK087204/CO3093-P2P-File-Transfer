@@ -4,9 +4,11 @@ import threading
 import socket
 from PeerHandler import PeerHandler
 from FileManager import FileManager
+
 TRACKER_PORT = 5050
 TRACKER_HOST = 'localhost'
 EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED', 'RUNNING']
+
 
 class Peer:
     def __init__(self, peer_ip, peer_port, info_hash):
@@ -24,7 +26,6 @@ class Peer:
         self.peer_server_thread = None
         self.file_manager = None
 
-
     def download(self):
         """
         Hàm sẽ tạo một thread cho việc lắng nghe yêu cầu từ các peer qua hàm start_server
@@ -41,6 +42,12 @@ class Peer:
         self.start_server()
         response = self.request("STARTED")
         print(response)
+        
+
+    def get_scrape(self):
+        self.start_server()
+        scrape_response = self.request("STARTED", 'scrape')
+        print(scrape_response)
 
     def start_server(self):
         """Khởi chạy server để lắng nghe các yêu cầu từ peer khác."""
@@ -63,11 +70,9 @@ class Peer:
             thread = threading.Thread(target=peer_handler.run)
             thread.start()
 
-
-    def request(self, event_state):
+    def request(self, event_state, request_type = 'announce'):
         self.event = event_state
         params = {
-            'info_hash': self.info_hash,
             'info_hash': self.info_hash,
             'peer_id': self.peer_id,
             'ip': self.peer_ip,
@@ -77,16 +82,15 @@ class Peer:
             'left': str(self.left),
             'compact': str(self.compact),
             'event': self.event,
-            'event': self.event,
         }
 
         query_string = urllib.parse.urlencode(params)
         # Tạo thông điệp GET request
-        request = f"GET /announce?{query_string} HTTP/1.1\r\n"
+        request = f"GET /{request_type}?{query_string} HTTP/1.1\r\n"
         request += f"Host: {TRACKER_HOST}\r\n"
         request += "Connection: close\r\n\r\n"
-        print(request)
-        print(request)
+        
+
         # Mở kết nối TCP tới tracker
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((TRACKER_HOST, TRACKER_PORT))  # Kết nối đến tracker
