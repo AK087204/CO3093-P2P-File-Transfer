@@ -1,0 +1,37 @@
+Tracker scrape
+
+Article
+Talk
+Read
+Edit
+View history
+
+Tools
+Appearance hide
+Text
+
+Small
+
+Standard
+
+Large
+Width
+
+Standard
+
+Wide
+Color (beta)
+
+Automatic
+
+Light
+
+Dark
+From Wikipedia, the free encyclopedia
+A scrape, or tracker scrape, is a request sent by a BitTorrent client to a tracker. A request is sent, connection to the tracker is established, information is exchanged, then the connection is closed. The request does something like a "wipe" or a "pass" over the tracker, and then the tracker sends information back to the client.[1][2]
+
+The returned information can contain such information as, whether the tracker is on- or offline, the reason it is offline, the numbers of peers and seeds (sending a list of all peers in the swarm is usually much more bandwidth consuming than just sending a scrape result), etc. Note that some trackers don't support scrape requests, but it is still possible to use the tracker as usual.
+
+A client scrapes in order to determine whether or not to send an announce requesting more peers. Sending a scrape result usually requires less data transfer than sending a list of peers.
+
+Clients with scrape support will scrape the tracker many times during the course of a download to update its information about the swarm. The tracker is scraped many thousands of times for each torrent alone, even if the swarm is not very big. The tracker can usually handle this number of requests. However, if there are more requests than strictly necessary, this can destabilize the tracker and put it offline.
