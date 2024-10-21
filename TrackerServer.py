@@ -12,7 +12,7 @@ class TrackerServer:
 
     def start(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.host, self.port))
+            s.bind(('0.0.0.0', self.port))
             s.listen()
             print(f"Tracker server listening on {self.host}:{self.port}")
             while True:

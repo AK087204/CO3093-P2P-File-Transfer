@@ -31,6 +31,7 @@ class User:
         peer = Peer(ip, port, info_hash)
         self.peerList.append(peer.peer_id)
         peer.download()
+        self.peerList.remove(peer)
 
 
     def share(self):
@@ -51,16 +52,24 @@ class User:
         peer = Peer(ip, port, info_hash)
         self.peerList.append(peer.peer_id)
 
-        peer.share(file_manager)
-        return magnet_link
+        peer.upload(file_manager)
+        self.peerList.remove(peer)
 
-    def get_scrape(self):
-        magnet_link = input("Please input magnet link: ")
-        info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
+    def scrape_tracker(self):
+        isTorrent = False
+
+        if isTorrent:
+            torrent_file = input("Please input file path: ")
+            info_hash = TorrentUtils.get_info_hash_from_file(torrent_file)
+        else:
+            magnet_link = input("Please input magnet link: ")
+            info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
+
         ip, port = self._get_ip_port()
         peer = Peer(ip, port, info_hash)
-        # self.peerList.append(peer.peer_id)
-        peer.get_scrape()
+        self.peerList.append(peer.peer_id)
+        peer.scrape_tracker()
+        self.peerList.remove(peer)
 
     def _input_directory(self, dir_path, file_manager):
         """
