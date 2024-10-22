@@ -3,7 +3,7 @@ import urllib.parse
 import threading
 import socket
 from threading import Thread
-
+import json
 from PeerHandler import PeerHandler
 from FileManager import FileManager
 
@@ -36,16 +36,20 @@ class Peer:
         self.start_server()
         # Gửi request và nhận về peer list từ tracker server
         response = self.peer_server.announce_request("STARTED")
+        response = json.loads(response)
+        print(response)
         self.file_manager = FileManager()
 
-        print('List: \n'.join([":".join(line.split(':')[1:]) for line in response.splitlines()]))
-
-        peers = response.split('\n')
+        peers = response['peers']
 
         # Tạo PeerHandler để communicate với các peer khác
         for peer in peers:
-            peer_id, ip, port = peer.split(':')
+
+            peer_id = peer["peer_id"]
+            ip = peer["ip"]
+            port = peer["port"]
             port = int(port)
+
             conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             conn.connect((ip, port))
             peer_handler = PeerHandler(conn, (ip, port), self.info_hash, peer_id, self.handle_callback)
@@ -131,4 +135,3 @@ class Peer:
                 min_frequency = frequency
                 rarest_piece = piece_index
         return rarest_piece
-

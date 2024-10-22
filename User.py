@@ -11,10 +11,10 @@ from Peer import Peer
 import socket
 
 class User:
-    def __init__(self, userId: str, name:str = "Anonymous"):
-        self.userId = userId
+    def __init__(self, userId, name:str = "Anonymous"):
         self.name = name
         self.peerList = []
+        self.userId = userId
 
     def download(self):
         isTorrent = False
@@ -26,12 +26,11 @@ class User:
             magnet_link = input("Please input magnet link: ")
             info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
 
-        print(info_hash)
         ip, port = self._get_ip_port()
         peer = Peer(ip, port, info_hash)
         self.peerList.append(peer.peer_id)
         peer.download()
-        self.peerList.remove(peer)
+
 
 
     def share(self):
@@ -53,7 +52,7 @@ class User:
         self.peerList.append(peer.peer_id)
 
         peer.upload(file_manager)
-        self.peerList.remove(peer)
+
 
     def scrape_tracker(self):
         isTorrent = False
@@ -69,7 +68,7 @@ class User:
         peer = Peer(ip, port, info_hash)
         self.peerList.append(peer.peer_id)
         peer.scrape_tracker()
-        self.peerList.remove(peer)
+
 
     def _input_directory(self, dir_path, file_manager):
         """
@@ -132,6 +131,3 @@ class User:
             port = s.getsockname()[1]  # Lấy port đã bind
         return ip_address, port
 
-""" if __name__ == '__main__':
-    user = User()
-    user.share() """

@@ -10,7 +10,7 @@ def main():
     elif x == 2:
         user.download()
     elif x == 3:
-        user.get_scrape()
+        user.scrape_tracker()
     else:
         print("Invalid input")
 main()
