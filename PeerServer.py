@@ -1,7 +1,7 @@
 import urllib.parse
 import socket
 
-TRACKER_PORT = 6969
+TRACKER_PORT = 5050
 TRACKER_HOST = 'localhost'
 EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 
@@ -44,7 +44,6 @@ class PeerServer:
         request = f"GET /announce?{query_string} HTTP/1.1\r\n"
         request += f"Host: {TRACKER_HOST}\r\n"
         request += "Connection: close\r\n\r\n"
-        print(request)
 
         response = self.send_request(request)
         return response

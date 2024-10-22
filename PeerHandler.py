@@ -73,8 +73,8 @@ class PeerHandler:
             pstrlen = struct.unpack("B", response[0:1])[0]  # Độ dài của chuỗi giao thức
             pstr = response[1:20].decode("utf-8")  # Chuỗi giao thức (BitTorrent protocol)
             reserved = response[20:28]  # 8 bytes reserved
-            received_info_hash = response[28:48]  # 20 bytes info_hash
-            received_peer_id = response[48:68]  # 20 bytes peer_id
+            received_info_hash = response[28:48].decode('utf-8')  # 20 bytes info_hash
+            received_peer_id = response[48:68].decode('utf-8')  # 20 bytes peer_id
 
             # Kiểm tra chuỗi giao thức và info_hash
             if pstr == "BitTorrent protocol" and received_info_hash == self.info_hash:
@@ -97,6 +97,13 @@ class PeerHandler:
             pstrlen = len(pstr)
             reserved = b'\x00' * 8  # 8 bytes reserved (all zeros)
 
+            # Đảm bảo rằng info_hash và peer_id là kiểu bytes
+            if isinstance(self.info_hash, str):
+                self.info_hash = self.info_hash.encode('utf-8')
+
+            if isinstance(self.peer_id, str):
+                self.peer_id = self.peer_id.encode('utf-8')
+
             # Định dạng thông điệp handshake:
             # <pstrlen><pstr><reserved><info_hash><peer_id>
             handshake_message = struct.pack(
@@ -105,7 +112,7 @@ class PeerHandler:
                 pstr.encode('utf-8'),
                 reserved,
                 self.info_hash,
-                self.peer_id.encode('utf-8')
+                self.peer_id
             )
 
             # Gửi thông điệp handshake
