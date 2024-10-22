@@ -3,7 +3,9 @@ import urllib.parse
 import threading
 import socket
 from threading import Thread
-import json
+import random
+import string
+
 from PeerHandler import PeerHandler
 from FileManager import FileManager
 
@@ -12,7 +14,8 @@ EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 
 class Peer:
     def __init__(self, peer_ip, peer_port, info_hash):
-        self.peer_id = str(uuid.uuid4())
+        self.peer_id = self.generate_peer_id()
+        print(f"{len(self.peer_id)} bytes")
         self.peer_ip = peer_ip
         self.peer_port = peer_port
         self.peer_server = PeerServer(self.peer_id, peer_ip, peer_port, info_hash)
@@ -23,6 +26,12 @@ class Peer:
         self.bitfields = {}  # Lưu trữ bitfield từ mỗi peer (peer_id -> bitfield)
         self.piece_frequencies = {}  # Đếm tần suất xuất hiện của mỗi piece
         self.lock = threading.Lock()
+
+    def generate_peer_id(self):
+        client_id = "PY"  # Two characters for client id (e.g., PY for Python)
+        version = "0001"  # Four ascii digits for version number
+        random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+        return f"-{client_id}{version}-{random_chars}"
 
     def download(self):
         """
@@ -55,7 +64,6 @@ class Peer:
             peer_handler = PeerHandler(conn, (ip, port), self.info_hash, peer_id, self.handle_callback)
             thread = Thread(target=peer_handler.run)
             thread.start()
-
 
 
     def upload(self, file_manager):

@@ -3,6 +3,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 from typing import Dict, List, Optional
 import uuid
+import threading
 class TrackerServer:
     def __init__(self, host: str = 'localhost', port: int = 5050):
         self.host = host
@@ -19,12 +20,21 @@ class TrackerServer:
                 conn, addr = s.accept()
                 with conn:
                     print(f"Connected by {addr}")
+                    """ peer_handler = threading.Thread(target=self.handle_connection, args=(conn, addr))
+                    peer_handler.start()  """
                     data = conn.recv(1024).decode('utf-8')
                     print(f"Data received: {data}")
                     # Data received
                     response = self.handle_request(data)
                     conn.sendall(response.encode('utf-8'))
 
+    def handle_connection(self, conn, addr):
+        data = conn.recv(1024).decode('utf-8')
+        print(f"Data received: {data} from {addr}")
+        # Data received
+        response = self.handle_request(data)
+        conn.sendall(response.encode('utf-8'))
+        
     def handle_request(self, request: str) -> str:
         # Split the request into lines
         request_lines = request.split('\r\n')
