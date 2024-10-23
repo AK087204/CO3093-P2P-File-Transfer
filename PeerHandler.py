@@ -64,62 +64,69 @@ class PeerHandler:
 
     def parse_handshake(self, response):
         """
-        Phân tích thông điệp handshake từ peer.
-        Kiểm tra info_hash và trả về True nếu hợp lệ, False nếu không.
+        Parse the handshake message from a peer.
+        Check the info_hash and return True if valid, False otherwise.
         """
         try:
-            # Thông điệp handshake có format:
+            print(f"handshake response: {response}")
+            # Handshake message format:
             # <pstrlen><pstr><reserved><info_hash><peer_id>
-            pstrlen = struct.unpack("B", response[0:1])[0]  # Độ dài của chuỗi giao thức
-            pstr = response[1:20].decode("utf-8")  # Chuỗi giao thức (BitTorrent protocol)
+            pstrlen = struct.unpack("B", response[0:1])[0]  # Length of the protocol string
+            pstr = response[1:20].decode("utf-8")  # Protocol string (BitTorrent protocol)
             reserved = response[20:28]  # 8 bytes reserved
-            received_info_hash = response[28:48].decode('utf-8')  # 20 bytes info_hash
-            received_peer_id = response[48:68].decode('utf-8')  # 20 bytes peer_id
+            received_info_hash = response[28:48]  # 20 bytes info_hash (raw bytes)
+            received_peer_id = response[48:68].decode("utf-8")  # 20 bytes peer_id (raw bytes)
 
-            # Kiểm tra chuỗi giao thức và info_hash
+            # Check protocol string and info_hash (compare raw bytes, no decoding)
             if pstr == "BitTorrent protocol" and received_info_hash == self.info_hash:
-                print(f"Handshake nhận thành công từ {self.addr}")
+                print(f"Handshake received successfully from {self.addr}")
                 print(f"Peer ID: {received_peer_id}")
                 return True
             else:
-                print("Handshake không hợp lệ")
+                print("Handshake invalid")
                 return False
         except Exception as e:
-            print(f"Phân tích handshake thất bại: {e}")
+            print(f"Handshake parsing failed: {e}")
             return False
 
     def send_handshake(self):
         """
-        Gửi thông điệp handshake đến peer.
+        Send handshake message to the peer.
         """
         try:
             pstr = "BitTorrent protocol"
             pstrlen = len(pstr)
             reserved = b'\x00' * 8  # 8 bytes reserved (all zeros)
 
-            # Đảm bảo rằng info_hash và peer_id là kiểu bytes
+            # Ensure info_hash and peer_id are bytes (SHA-1 hash is 20 bytes)
             if isinstance(self.info_hash, str):
-                self.info_hash = self.info_hash.encode('utf-8')
+                raise ValueError("info_hash must be in bytes, not a string.")
 
+            # Ensure info_hash and peer_id are exactly 20 bytes
+            info_hash_bytes = self.info_hash if len(self.info_hash) == 20 else None
             if isinstance(self.peer_id, str):
                 self.peer_id = self.peer_id.encode('utf-8')
 
-            # Định dạng thông điệp handshake:
+            if info_hash_bytes is None:
+                raise ValueError("info_hash must be exactly 20 bytes.")
+
+            # Construct the handshake message:
             # <pstrlen><pstr><reserved><info_hash><peer_id>
             handshake_message = struct.pack(
                 f"B{pstrlen}s8s20s20s",
                 pstrlen,
-                pstr.encode('utf-8'),
+                pstr.encode('utf-8'),  # pstr needs to be encoded as text
                 reserved,
-                self.info_hash,
+                info_hash_bytes,
                 self.peer_id
             )
 
-            # Gửi thông điệp handshake
+            print(f"handshake message: {handshake_message}")
+            # Send the handshake message
             self.conn.send(handshake_message)
-            print(f"Handshake gửi đến {self.addr}")
+            print(f"Handshake sent to {self.addr}")
         except Exception as e:
-            print(f"Gửi handshake thất bại: {e}")
+            print(f"Handshake send failed: {e}")
 
     def send_interested(self):
         """

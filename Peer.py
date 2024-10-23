@@ -5,6 +5,7 @@ import socket
 from threading import Thread
 import random
 import string
+import json
 
 from PeerHandler import PeerHandler
 from FileManager import FileManager

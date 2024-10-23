@@ -18,22 +18,18 @@ class TrackerServer:
             print(f"Tracker server listening on {self.host}:{self.port}")
             while True:
                 conn, addr = s.accept()
-                with conn:
-                    print(f"Connected by {addr}")
-                    """ peer_handler = threading.Thread(target=self.handle_connection, args=(conn, addr))
-                    peer_handler.start()  """
-                    data = conn.recv(1024).decode('utf-8')
-                    print(f"Data received: {data}")
-                    # Data received
-                    response = self.handle_request(data)
-                    conn.sendall(response.encode('utf-8'))
+                """ with conn: """
+                print(f"Connected by {addr}")
+                threading.Thread(target=self.handle_connection, args=(conn, addr)).start()
+                
 
     def handle_connection(self, conn, addr):
-        data = conn.recv(1024).decode('utf-8')
-        print(f"Data received: {data} from {addr}")
-        # Data received
-        response = self.handle_request(data)
-        conn.sendall(response.encode('utf-8'))
+        with conn:
+            data = conn.recv(1024).decode('utf-8')
+            print(f"Data received: {data} from {addr}")
+            # Data received
+            response = self.handle_request(data)
+            conn.sendall(response.encode('utf-8'))
         
     def handle_request(self, request: str) -> str:
         # Split the request into lines
@@ -104,13 +100,13 @@ class TrackerServer:
         if type == '/announce':
             response = {
                 'tracker_id': self.tracker_id,
-                'file_id': info_hash,
+                'info_hash': info_hash,
                 'peers': self.peers.get(info_hash, [])
             }
         elif type == '/scrape':
             response = {
                 'tracker_id': self.tracker_id,
-                'file_id': info_hash,
+                'info_hash': info_hash,
                 'total_peers': len(self.peers.get(info_hash, []))
             }
         return json.dumps(response)

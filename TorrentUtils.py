@@ -86,6 +86,7 @@ class TorrentUtils:
         # Encode the 'info' part and generate the SHA-1 hash
         hash_contents = bencodepy.encode(subj)
         info_hash = hashlib.sha1(hash_contents).digest()
+        print(f"info_hash from magnet: {info_hash}")
         info_hash_hex = info_hash.hex()
 
         # Get the name of the directory or file
