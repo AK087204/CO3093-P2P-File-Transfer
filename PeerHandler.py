@@ -1,53 +1,166 @@
 import struct
 import threading
 import time
-
+from enum import IntEnum
+class MessageType(IntEnum):
+    CHOKE = 0
+    UNCHOKE = 1
+    INTERESTED = 2
+    NOT_INTERESTED = 3
+    HAVE = 4
+    BITFIELD = 5
+    REQUEST = 6
+    PIECE = 7
+    CANCEL = 8
 
 class PeerHandler:
     def __init__(self, conn, addr, info_hash, peer_id, callback_function):
-        self.conn = conn  # Kết nối socket với peer
-        self.addr = addr  # Địa chỉ của peer
-        self.am_choking = 1
-        self.am_interested = 0
-        self.peer_choking = 1
-        self.peer_interested = 0
-        self.info_hash = info_hash  # Hash của torrent để so khớp
-        self.peer_id = peer_id  # Peer ID của chính mình
+        """
+                Initialize a PeerHandler instance.
+
+                Args:
+                    conn: Socket connection to peer
+                    addr: Peer address tuple (ip, port)
+                    info_hash: Torrent info hash
+                    peer_id: Our peer ID
+                    callback_function: Callback object for managing pieces
+        """
+
+        self.conn = conn
+        self.addr = addr
+        self.info_hash = info_hash
+        self.peer_id = peer_id
         self.callback_function = callback_function
+
+        # State flags
+        self.am_choking = True
+        self.am_interested = False
+        self.peer_choking = True
+        self.peer_interested = False
+
+        # Threading control
+        self.running = False
         self.listen_thread = None
         self.request_thread = None
 
+        # Peer state
+        self.bitfield = None
+        self.pending_requests = {}  # {(index, begin): request_time}
+        self.max_pending_requests = 5
+        self.last_message_time = time.time()
+
+        # Statistics
+        self.total_downloaded = 0
+        self.download_rate = 0
+        self.last_download_measurement = time.time()
+
     def run(self):
-        # Thực hiện hai chiều bắt tay (handshake)
         if self.two_way_handshake():
-            # Tạo thread lắng nghe các message từ peer
+            # After successful handshake, send interested message
+            self.send_interested()
+
+            # Start listening thread
             self.listen_thread = threading.Thread(target=self.listen)
             self.listen_thread.start()
 
-            # Tạo thread khác để gửi các yêu cầu request piece khi cần thiết
+            # Start request thread (will only send requests when unchoked)
             self.request_thread = threading.Thread(target=self.send_requests)
             self.request_thread.start()
 
     def listen(self):
-        while True:
-            # Nhận dữ liệu từ peer
-            response = self.conn.recv(1024)
-            if not response:
-                break  # Ngắt kết nối nếu không còn dữ liệu
-            self.handle_message(response)  # Xử lý dữ liệu nhận được từ peer
+        while self.running:
+            try:
+                # First read the message length (4 bytes)
+                length_prefix = self.conn.recv(4)
+                if not length_prefix:
+                    break
 
-    def handle_message(self, message):
-        pass
+                # Unpack the length
+                length = struct.unpack(">I", length_prefix)[0]
+
+                # Keep-alive message
+                if length == 0:
+                    continue
+
+                # Read the message type
+                message_type = struct.unpack("B", self.conn.recv(1))[0]
+
+                # Read the payload (length - 1 because we already read the message type)
+                payload = b""
+                remaining = length - 1
+                while remaining > 0:
+                    chunk = self.conn.recv(min(remaining, 16384))
+                    if not chunk:
+                        break
+                    payload += chunk
+                    remaining -= len(chunk)
+
+                self.handle_message(message_type, payload)
+
+            except Exception as e:
+                print(f"Error in listen loop: {e}")
+                break
+
+        self.running = False
+
+    def handle_message(self, message_type, payload):
+        try:
+            if message_type == MessageType.CHOKE:
+                self.peer_choking = 1
+                print(f"Peer {self.addr} choked us")
+
+            elif message_type == MessageType.UNCHOKE:
+                self.peer_choking = 0
+                print(f"Peer {self.addr} unchoked us")
+
+            elif message_type == MessageType.INTERESTED:
+                self.peer_interested = 1
+                print(f"Peer {self.addr} is interested")
+
+            elif message_type == MessageType.NOT_INTERESTED:
+                self.peer_interested = 0
+                print(f"Peer {self.addr} is not interested")
+
+            elif message_type == MessageType.HAVE:
+                piece_index = struct.unpack(">I", payload)[0]
+                print(f"Peer {self.addr} has piece {piece_index}")
+                if self.bitfield:
+                    self.bitfield[piece_index] = 1
+
+            elif message_type == MessageType.BITFIELD:
+                self.bitfield = bytearray(payload)
+                print(f"Received bitfield from {self.addr}")
+
+            elif message_type == MessageType.PIECE:
+                # Handle received piece data
+                if len(payload) < 8:
+                    return
+                index = struct.unpack(">I", payload[0:4])[0]
+                begin = struct.unpack(">I", payload[4:8])[0]
+                block = payload[8:]
+                print(f"Received piece {index} at offset {begin}, length {len(block)}")
+                # Call callback to handle the received piece
+                if self.callback_function:
+                    self.callback_function("piece_received", index, begin, block)
+
+        except Exception as e:
+            print(f"Error handling message type {message_type}: {e}")
 
     def send_requests(self):
-        while True:
-            # Lấy thông tin về piece cần tải từ callback
-            piece_index = self.callback_function()
-            if piece_index is not None:
-                self.request_block(piece_index)
-            # Có thể thêm điều kiện để kiểm tra nếu không còn piece nào cần tải thì dừng gửi yêu cầu
-            # Thêm delay hoặc logic khác để tránh việc gửi yêu cầu quá nhiều
-            time.sleep(0.5)
+        while self.running:
+            if not self.peer_choking and self.am_interested:
+                try:
+                    # Get next piece to request from callback
+                    request_info = self.callback_function("get_request")
+                    if request_info:
+                        index, begin, length = request_info
+                        self.request_block(index, begin, length)
+                    else:
+                        # No more pieces needed, sleep longer
+                        time.sleep(1)
+                except Exception as e:
+                    print(f"Error in send_requests: {e}")
+            time.sleep(0.1)
 
     def two_way_handshake(self):
 
@@ -132,13 +245,17 @@ class PeerHandler:
         """
         Gửi thông điệp 'interested' để báo hiệu rằng mình muốn download dữ liệu từ peer.
         """
-        try:
-            interested_msg = struct.pack(">I", 1) + struct.pack("B", 2)  # length (1 byte) + message id (2)
-            self.conn.send(interested_msg)
-            self.am_interested = 1
-            print(f"Gửi thông điệp 'interested' đến peer {self.addr}")
-        except Exception as e:
-            print(f"Gửi thông điệp 'interested' thất bại: {e}")
+        # try:
+        #     interested_msg = struct.pack(">I", 1) + struct.pack("B", 2)  # length (1 byte) + message id (2)
+        #     self.conn.send(interested_msg)
+        #     self.am_interested = 1
+        #     print(f"Gửi thông điệp 'interested' đến peer {self.addr}")
+        # except Exception as e:
+        #     print(f"Gửi thông điệp 'interested' thất bại: {e}")
+        """Send interested message to peer"""
+        self.send_message(MessageType.INTERESTED)
+        self.am_interested = 1
+        print(f"Sent interested message to {self.addr}")
 
     def listen_for_unchoke(self):
         """
@@ -161,19 +278,38 @@ class PeerHandler:
         except Exception as e:
             print(f"Lắng nghe 'unchoke' thất bại: {e}")
 
-    def request_block(self):
+    def send_message(self, message_type, payload=b''):
+        """Utility method to send a message with proper length prefix"""
+        try:
+            message_length = len(payload) + 1  # +1 for message type
+            message = struct.pack('>IB', message_length, message_type) + payload
+            self.conn.send(message)
+        except Exception as e:
+            print(f"Error sending message type {message_type}: {e}")
+
+    def request_block(self,index, begin, length):
         """
         Gửi thông điệp 'request' để yêu cầu một block từ peer.
         """
-        try:
-            index, begin, length = self.callback_function()
+        # try:
+        #     index, begin, length = self.callback_function()
+        #
+        #     request_msg = struct.pack(">I", 13) + struct.pack("B", 6)  # length (13 bytes) + message id (6)
+        #     request_msg += struct.pack(">I", index)  # Piece index
+        #     request_msg += struct.pack(">I", begin)  # Offset
+        #     request_msg += struct.pack(">I", length)  # Requested length
+        #
+        #     self.conn.send(request_msg)
+        #     print(f"Yêu cầu block từ peer {self.addr}: Piece index {index}, offset {begin}, length {length}")
+        # except Exception as e:
+        #     print(f"Gửi yêu cầu block thất bại: {e}")
+        """Send request for a specific block"""
+        payload = struct.pack('>III', index, begin, length)
+        self.send_message(MessageType.REQUEST, payload)
+        print(f"Requested block - index: {index}, begin: {begin}, length: {length}")
 
-            request_msg = struct.pack(">I", 13) + struct.pack("B", 6)  # length (13 bytes) + message id (6)
-            request_msg += struct.pack(">I", index)  # Piece index
-            request_msg += struct.pack(">I", begin)  # Offset
-            request_msg += struct.pack(">I", length)  # Requested length
-
-            self.conn.send(request_msg)
-            print(f"Yêu cầu block từ peer {self.addr}: Piece index {index}, offset {begin}, length {length}")
-        except Exception as e:
-            print(f"Gửi yêu cầu block thất bại: {e}")
+        def close(self):
+            """Clean shutdown of peer connection"""
+            self.running = False
+            if self.conn:
+                self.conn.close()
