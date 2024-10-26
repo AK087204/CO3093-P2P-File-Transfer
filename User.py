@@ -21,13 +21,13 @@ class User:
 
         if isTorrent:
             torrent_file = input("Please input file path: ")
-            info_hash = TorrentUtils.get_info_hash_from_file(torrent_file)
+            info_hash, total_length = TorrentUtils.get_info_from_file(torrent_file)
         else:
             magnet_link = input("Please input magnet link: ")
-            info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
+            info_hash, total_length = TorrentUtils.get_info_from_magnet(magnet_link)
 
         ip, port = self._get_ip_port()
-        peer = Peer(ip, port, info_hash)
+        peer = Peer(ip, port, info_hash, total_length)
         self.peerList.append(peer.peer_id)
         peer.download()
 
@@ -35,9 +35,11 @@ class User:
 
     def share(self):
         path = input("Nhập vào đường dẫn đến file hoặc directory: ")
-        file_manager = FileManager()
+        total_length = os.path.getsize(path)
+        print("Total length",total_length)
+        file_manager = FileManager(total_length)
         file_manager.split_file(path)
-
+        print("Bitfield:", file_manager.get_bitfield())
         if os.path.isdir(path):
             info_hash, magnet_link = self._input_directory(path, file_manager)
         elif os.path.isfile(path):
@@ -48,7 +50,7 @@ class User:
         print(f"Magnet link: {magnet_link}")
 
         ip, port = self._get_ip_port()
-        peer = Peer(ip, port, info_hash)
+        peer = Peer(ip, port, info_hash, total_length)
         self.peerList.append(peer.peer_id)
 
         peer.upload(file_manager)
@@ -59,13 +61,13 @@ class User:
 
         if isTorrent:
             torrent_file = input("Please input file path: ")
-            info_hash = TorrentUtils.get_info_hash_from_file(torrent_file)
+            info_hash, total_length = TorrentUtils.get_info_from_file(torrent_file)
         else:
             magnet_link = input("Please input magnet link: ")
-            info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
+            info_hash, total_length = TorrentUtils.get_info_from_magnet(magnet_link)
 
         ip, port = self._get_ip_port()
-        peer = Peer(ip, port, info_hash)
+        peer = Peer(ip, port, info_hash, total_length)
         self.peerList.append(peer.peer_id)
         peer.scrape_tracker()
 
@@ -94,7 +96,7 @@ class User:
         TorrentUtils.create_torrent_file(encoded, 'download.torrent')
         magnet_link = TorrentUtils.make_magnet_from_bencode(encoded)
 
-        info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
+        info_hash, _ = TorrentUtils.get_info_from_magnet(magnet_link)
         return info_hash, magnet_link
 
 
@@ -116,7 +118,7 @@ class User:
         TorrentUtils.create_torrent_file(encoded, 'download.torrent')
         magnet_link = TorrentUtils.make_magnet_from_bencode(encoded)
 
-        info_hash = TorrentUtils.get_info_hash_from_magnet(magnet_link)
+        info_hash, _ = TorrentUtils.get_info_from_magnet(magnet_link)
         return info_hash, magnet_link
 
     def _get_ip_port(self):

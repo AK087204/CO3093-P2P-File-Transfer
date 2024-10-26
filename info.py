@@ -10,6 +10,9 @@ class Info(ABC):
     def get_all_info(self) -> dict:
         return {'pieceLength':self.pieceLength, 'pieces':self.pieces}
 
+    @abstractmethod
+    def get_total_length(self) -> int:
+        pass
 
 class InfoSingleFile(Info):
     def __init__(self, pieceLength, pieces, name: str, length: int):
@@ -21,6 +24,9 @@ class InfoSingleFile(Info):
         dic = super().get_all_info()
         dic.update({'name':self.name, 'length':self.length})
         return dic
+
+    def get_total_length(self) -> int:
+        return self.length
 
 class File:
     def __init__(self, length, path):
@@ -37,8 +43,16 @@ class InfoMultiFile(Info):
         self.name = name                #the name of the directory
         self.files = files              #a list of dictionaries
 
+    def get_total_length(self):
+        total_length = 0
+        for file in self.files:
+            total_length += file.length
+
+        return total_length
+
     def get_all_info(self) -> dict:
         dic = super().get_all_info()
-        dic.update({'name':self.name, 'files':[file.get_all_info() for file in self.files]})
+        length = self.get_total_length()
+        dic.update({'name':self.name, 'length': length, 'files':[file.get_all_info() for file in self.files]})
         return dic
 
