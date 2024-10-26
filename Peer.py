@@ -14,7 +14,7 @@ from PeerServer import PeerServer
 EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 
 class Peer:
-    def __init__(self, peer_ip, peer_port, info_hash):
+    def __init__(self, peer_ip, peer_port, info_hash, total_length):
         self.peer_id = self.generate_peer_id()
         print(f"{len(self.peer_id)} bytes")
         self.peer_ip = peer_ip
@@ -27,6 +27,8 @@ class Peer:
         self.bitfields = {}  # Lưu trữ bitfield từ mỗi peer (peer_id -> bitfield)
         self.piece_frequencies = {}  # Đếm tần suất xuất hiện của mỗi piece
         self.lock = threading.Lock()
+        self.total_length = total_length
+        self.bitfield_timeout = 10
 
     def generate_peer_id(self):
         client_id = "PY"  # Two characters for client id (e.g., PY for Python)
@@ -41,28 +43,25 @@ class Peer:
         Với mỗi peer sẽ tạo một thread chạy PeerHandler để communicate
         :return: void
         """
-
+        self.file_manager = FileManager(self.total_length)
         # Tạo server để lắng nghe và phản hồi yêu cầu từ các peer khác
         self.start_server()
         # Gửi request và nhận về peer list từ tracker server
         response = self.peer_server.announce_request("STARTED")
         response = json.loads(response)
         print(response)
-        self.file_manager = FileManager()
 
         peers = response['peers']
 
         # Tạo PeerHandler để communicate với các peer khác
         for peer in peers:
 
-            peer_id = peer["peer_id"]
             ip = peer["ip"]
-            port = peer["port"]
-            port = int(port)
+            port = int(peer["port"])
 
             conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             conn.connect((ip, port))
-            peer_handler = PeerHandler(conn, (ip, port), self.info_hash, peer_id, self.handle_callback)
+            peer_handler = PeerHandler(conn, (ip, port), self.info_hash, self.peer_id, self.callback)
             thread = Thread(target=peer_handler.run)
             thread.start()
 
@@ -77,23 +76,30 @@ class Peer:
         respond = self.peer_server.scrape_request()
         print(respond)
 
-    def handle_callback(self, event_type, data, peer_handler):
+    def callback(self, peer_id, event_type, data=None)->dict:
         """
         Callback function để xử lý các sự kiện từ PeerHandler
         """
         if event_type == 'bitfield_received':
-            peer_id = peer_handler.peer_id
             bitfield = data['bitfield']
             with self.lock:
                 # Lưu lại bitfield nhận được từ PeerHandler
                 self.bitfields[peer_id] = bitfield
                 self.update_piece_frequencies(bitfield)
+                interested = self.file_manager.is_interested(bitfield)
+                return {'interested' : interested}
 
-            # Kiểm tra xem đã có đủ thông tin để tìm ra rarest piece chưa
-            if self.has_enough_bitfields():
-                rarest_piece = self.get_rarest_piece()
-                print(f"Rarest piece: {rarest_piece}")
-                peer_handler.request_piece(rarest_piece)  # Yêu cầu tải rarest piece
+        elif event_type == 'request_bitfield':
+            return  {'bitfield' : self.file_manager.get_bitfield()}
+
+        elif event_type == 'request_piece':
+            index = self.get_rarest_piece()
+            return {'index': index, 'begin': 0, 'length': 0}
+
+        elif event_type == 'piece_received':
+            piece = data['piece']
+            self.file_manager.add_piece(piece)
+
 
     def start_server(self):
         """Khởi chạy server để lắng nghe các yêu cầu từ peer khác."""
@@ -112,23 +118,22 @@ class Peer:
         server_socket.listen(5)
         while self.is_running:
             conn, addr = server_socket.accept()
-            peer_handler = PeerHandler(conn, addr, self.info_hash, self.peer_id, self.handle_callback)
+            peer_handler = PeerHandler(conn, addr, self.info_hash, self.peer_id, self.callback)
             thread = threading.Thread(target=peer_handler.run)
             thread.start()
 
-    def has_enough_bitfields(self):
-        """
-        Kiểm tra xem đã thu thập đủ bitfield từ nhiều peer chưa.
-        """
-        # Giả sử bạn cần thu thập bitfield từ ít nhất 5 peer
-        return len(self.bitfields) >= 5
 
     def update_piece_frequencies(self, bitfield):
         """
         Cập nhật tần suất xuất hiện của mỗi piece dựa trên bitfield nhận được
         """
-        for piece_index, has_piece in enumerate(bitfield):
-            if has_piece:
+        total_pieces = self.file_manager.get_total_pieces()
+        for piece_index in range(total_pieces):
+            byte_index = piece_index // 8
+            bit_index = piece_index % 8
+
+            # Check if the bit is set (indicating the piece is available)
+            if bitfield[byte_index] & (1 << (7 - bit_index)):
                 if piece_index not in self.piece_frequencies:
                     self.piece_frequencies[piece_index] = 0
                 self.piece_frequencies[piece_index] += 1
