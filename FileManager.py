@@ -5,15 +5,30 @@ class Piece:
         self.piece_id = piece_id
         self.data = data
         self.hash_value = hash_value
+        self.length = len(data)
+
+    def get_length(self):
+        return self.length
+
+    def get_data(self):
+        return self.data
 
 class FileManager:
     def __init__(self, total_length, piece_length: int = 8192):
         self.piece_length = piece_length
         self.total_length = total_length
+        self.total_pieces = self.get_total_pieces()
         self.pieces = []
 
     def get_piece_length(self):
         return self.piece_length
+
+    def get_exact_piece_length(self, index):
+        total_pieces = self.get_total_pieces()
+        if index < total_pieces - 1:
+            return self.piece_length
+        else:
+            return self.total_length - (total_pieces - 1) * self.piece_length
 
     def split_file(self, file_path):
 
@@ -28,6 +43,17 @@ class FileManager:
         except OSError:
             raise FileNotFoundError(f"Unable to open file: {file_path}")
 
+    def get_piece(self, index) -> Piece:
+        for piece in self.pieces:
+            if piece.piece_id == index:
+                return piece
+
+    def has_piece(self, piece_id):
+        for piece in self.pieces:
+            if piece.piece_id == piece_id:
+                return True
+
+        return False
 
     def get_pieces_code(self):
         result = ""
@@ -58,7 +84,7 @@ class FileManager:
         return bytes(bitfield)
 
     def get_total_pieces(self):
-        return len(self.pieces)
+        return (self.total_length + self.piece_length - 1) // self.piece_length
 
     def is_interested(self, bitfield):
         num_pieces = math.ceil(self.total_length / self.piece_length)
@@ -80,3 +106,15 @@ class FileManager:
             if has_piece.piece_id == piece.piece_id:
                 return
         self.pieces.append(piece)
+
+    def check_complete(self):
+        if len(self.pieces) == self.total_pieces:
+            return True
+        return False
+
+    def export(self, file_path = 'download.txt'):
+        with open(file_path, 'wb') as f:
+            # Sort pieces by piece_id to ensure they are written in order
+            sorted_pieces = sorted(self.pieces, key=lambda piece: piece.piece_id)
+            for piece in sorted_pieces:
+                f.write(piece.get_data())

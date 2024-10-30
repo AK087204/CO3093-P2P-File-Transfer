@@ -114,9 +114,11 @@ class PeerHandler:
             elif message_type == MessageType.UNCHOKE:
                 self.peer_choking = 0
                 print(f"Peer {self.addr} unchoked us")
-                data = self.callback(self.client_id, "request_piece")
-                print(data)
-                self.send_request(data['index'], data['begin'], data['length'])
+
+                if self.am_interested:
+                    data = self.callback(self.client_id, "request_piece_index")
+                    print(data)
+                    self.send_request(data['index'], data['begin'], data['length'])
 
             elif message_type == MessageType.INTERESTED:
                 self.peer_interested = 1
@@ -135,14 +137,26 @@ class PeerHandler:
 
             elif message_type == MessageType.BITFIELD:
                 bitfield = bytearray(payload)
-                data = self.callback(self.client_id, "bitfield_received", {'bitfield':bitfield})
                 print(f"Received bitfield from {self.addr}, bitfield: {bitfield}")
+                data = self.callback(self.client_id, "bitfield_received", {'bitfield':bitfield})
                 print(data)
                 if data['interested']:
                     self.send_interested()
+                else:
+                    self.send_not_interested()
 
             elif message_type == MessageType.REQUEST:
                 print(f"Received request from {self.addr}")
+
+                if self.am_choking:
+                    print(f"Ignoring request from {self.addr}")
+                    return
+
+                index, begin, length = self.validate_request(payload)
+                print(f"Receive from {self.addr}, index: {index}, begin: {begin}, length: {length}")
+
+                piece = self.callback(self.client_id, "request_piece", {'index':index, 'begin':begin, 'length':length})
+                self.send_piece({'index' : index, 'begin': begin, 'block': piece.get_data()})
 
             elif message_type == MessageType.PIECE:
                 # Handle received piece data
@@ -153,8 +167,13 @@ class PeerHandler:
                 block = payload[8:]
                 print(f"Received piece {index} at offset {begin}, length {len(block)}")
                 # Call callback to handle the received piece
-                if self.callback:
-                    self.callback("piece_received", index, begin, block)
+                is_complete = self.callback(self.client_id, "piece_received", {'index' : index,'begin': begin,'block': block})
+                if is_complete:
+                    self.send_not_interested()
+                else:
+                    data = self.callback(self.client_id, "request_piece_index")
+                    print(data)
+                    self.send_request(data['index'], data['begin'], data['length'])
 
         except Exception as e:
             print(f"Error handling message type {message_type}: {e}")
@@ -245,14 +264,17 @@ class PeerHandler:
             print(f"Handshake send failed: {e}")
 
     def send_interested(self):
-        """
-        Gửi thông điệp 'interested' để báo hiệu rằng mình muốn download dữ liệu từ peer.
-        """
 
         """Send interested message to peer"""
         self.send_message(MessageType.INTERESTED)
         self.am_interested = 1
         print(f"Sent interested message to {self.addr}")
+
+    def send_not_interested(self):
+        """Send not interested message to peer"""
+        self.send_message(MessageType.NOT_INTERESTED)
+        self.am_interested = 0
+        print(f"Sent not interested message to {self.addr}")
 
     def listen_for_unchoke(self):
         """
@@ -310,6 +332,29 @@ class PeerHandler:
         """Send unchoke message to the peer."""
         self.send_message(MessageType.UNCHOKE)
         self.am_choking = False
+
+    def validate_request(self, payload):
+        index, begin, length = struct.unpack('>III', payload)
+        return index, begin, length
+
+    def send_piece(self, piece):
+        try:
+            # Đảm bảo piece chứa các trường cần thiết
+            index = piece['index']
+            begin = piece['begin']
+            block = piece['block']
+
+            # Đóng gói payload
+            payload = struct.pack('>II', index, begin) + block
+
+            # Gửi message với message_type là 7 (ID cho piece message)
+            self.send_message(MessageType.PIECE, payload)
+
+        except KeyError as e:
+            print(f"Missing piece field: {e}")
+        except Exception as e:
+            print(f"Error in send_piece: {e}")
+
 
     def close(self):
         """Clean shutdown of peer connection"""
