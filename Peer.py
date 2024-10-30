@@ -1,6 +1,5 @@
 import hashlib
-import uuid
-import urllib.parse
+
 import threading
 import socket
 from threading import Thread
@@ -8,7 +7,6 @@ import random
 import string
 import json
 
-from django.template.defaultfilters import length
 
 from PeerHandler import PeerHandler
 from FileManager import FileManager, Piece
@@ -17,21 +15,27 @@ from PeerServer import PeerServer
 EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 
 class Peer:
-    def __init__(self, peer_ip, peer_port, info_hash, total_length):
+    def __init__(self, peer_ip, peer_port, info):
         self.peer_id = self.generate_peer_id()
         print(f"{len(self.peer_id)} bytes")
         self.peer_ip = peer_ip
         self.peer_port = peer_port
-        self.peer_server = PeerServer(self.peer_id, peer_ip, peer_port, info_hash)
-        self.info_hash = info_hash
+
+        self.info_hash = info['info_hash']
+        self.total_length = info['length']
+        self.name = info['name']
+        self.trackers = info['trackers']
+
+        self.peer_server = PeerServer(self.peer_id, peer_ip, peer_port, self.info_hash)
+
         self.is_running = False
         self.peer_server_thread = None
         self.file_manager = None
+
         self.bitfields = {}  # Lưu trữ bitfield từ mỗi peer (peer_id -> bitfield)
         self.piece_frequencies = {}  # Đếm tần suất xuất hiện của mỗi piece
         self.lock = threading.Lock()
-        self.total_length = total_length
-        self.bitfield_timeout = 10
+
 
     def generate_peer_id(self):
         client_id = "PY"  # Two characters for client id (e.g., PY for Python)
@@ -116,7 +120,7 @@ class Peer:
             self.file_manager.add_piece(piece)
             is_complete = self.file_manager.check_complete()
             if is_complete:
-                self.file_manager.export()
+                self.file_manager.export(self.name)
             return is_complete
 
 

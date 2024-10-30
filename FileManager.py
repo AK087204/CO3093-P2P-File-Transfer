@@ -1,5 +1,7 @@
 import hashlib
 import math
+import os
+
 class Piece:
     def __init__(self, piece_id: int, data: bytes, hash_value):
         self.piece_id = piece_id
@@ -112,9 +114,18 @@ class FileManager:
             return True
         return False
 
-    def export(self, file_path = 'download.txt'):
-        with open(file_path, 'wb') as f:
-            # Sort pieces by piece_id to ensure they are written in order
+
+    def export(self, file_name='download.txt'):
+        # Đặt đường dẫn đầy đủ cho file trong thư mục 'download'
+        download_dir = 'download'
+        full_path = os.path.join(download_dir, file_name)
+
+        # Tạo thư mục 'download' nếu chưa tồn tại
+        if not os.path.exists(download_dir):
+            os.makedirs(download_dir)
+
+        with open(full_path, 'wb') as f:
+            # Sắp xếp các phần dựa trên piece_id để đảm bảo chúng được ghi theo thứ tự
             sorted_pieces = sorted(self.pieces, key=lambda piece: piece.piece_id)
             for piece in sorted_pieces:
                 f.write(piece.get_data())

@@ -32,35 +32,27 @@ class TorrentUtils:
 
     @staticmethod
     def get_info_from_magnet(magnet_link):
-        # Phân tích (parse) magnet link
-        parsed_link = urllib.parse.urlparse(magnet_link)
+        # Phân tích URL từ magnet link
+        parsed_url = urllib.parse.urlparse(magnet_link)
+        if parsed_url.scheme != 'magnet':
+            raise ValueError("Link không phải là magnet link hợp lệ.")
 
-        # Tách các tham số query của magnet link
-        query_params = urllib.parse.parse_qs(parsed_link.query)
+        # Tách các tham số từ magnet link
+        params = urllib.parse.parse_qs(parsed_url.query)
 
-        # Lấy giá trị của 'xt' (exact topic), trong đó chứa 'urn:btih:<info_hash>'
-        xt_param = query_params.get('xt', [])
-        info_hash = None
-        total_length = None
+        # Trích xuất từng thông tin
+        info_hash = bytes.fromhex(params.get('xt', [''])[0].split(':')[-1])  # Thông tin hash
+        name = params.get('dn', [''])[0]  # Tên file/torrent
+        length = int(params.get('xl', [''])[0])  # Kích thước file
+        trackers = params.get('tr', [])  # Danh sách trackers
 
-        if xt_param:
-            # 'urn:btih:<info_hash>' - chúng ta cần lấy phần <info_hash>
-            xt_value = xt_param[0]
-
-            if xt_value.startswith("urn:btih:"):
-                # Trích xuất và chuyển info_hash sang dạng byte
-                info_hash_hex = xt_value[9:]  # Bỏ qua "urn:btih:"
-                info_hash = bytes.fromhex(info_hash_hex)
-
-        # Kiểm tra nếu 'xl' có trong query params và lấy giá trị nếu có
-        xl_param = query_params.get('xl', [])
-        if xl_param:
-            try:
-                total_length = int(xl_param[0])  # Chuyển đổi sang kiểu số nguyên
-            except ValueError:
-                total_length = None  # Nếu không thể chuyển đổi, đặt total_length là None
-
-        return info_hash, total_length
+        # Đưa ra các thông tin đã trích xuất
+        return {
+            "info_hash": info_hash,
+            "name": name,
+            "length": int(length) if length else None,
+            "trackers": trackers
+        }
 
     @staticmethod
     def create_torrent_file(encoded_data, file_path):
