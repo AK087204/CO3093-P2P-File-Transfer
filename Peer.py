@@ -15,7 +15,7 @@ from PeerServer import PeerServer
 EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 
 class Peer:
-    def __init__(self, peer_ip, peer_port, info):
+    def __init__(self, peer_ip, peer_port, info, file_manager):
         self.peer_id = self.generate_peer_id()
         print(f"{len(self.peer_id)} bytes")
         self.peer_ip = peer_ip
@@ -29,8 +29,9 @@ class Peer:
         self.peer_server = PeerServer(self.peer_id, peer_ip, peer_port, self.info_hash)
 
         self.is_running = False
+        self.peers_and_threads = []
         self.peer_server_thread = None
-        self.file_manager = None
+        self.file_manager = file_manager
 
         self.bitfields = {}  # Lưu trữ bitfield từ mỗi peer (peer_id -> bitfield)
         self.piece_frequencies = {}  # Đếm tần suất xuất hiện của mỗi piece
@@ -50,7 +51,6 @@ class Peer:
         Với mỗi peer sẽ tạo một thread chạy PeerHandler để communicate
         :return: void
         """
-        self.file_manager = FileManager(self.total_length)
         # Tạo server để lắng nghe và phản hồi yêu cầu từ các peer khác
         self.start_server()
         # Gửi request và nhận về peer list từ tracker server
@@ -70,11 +70,14 @@ class Peer:
             conn.connect((ip, port))
             peer_handler = PeerHandler(conn, (ip, port), self.info_hash, self.peer_id, self.callback)
             thread = Thread(target=peer_handler.run)
+
+            self.peers_and_threads.append((peer_handler, thread))
+
             thread.start()
 
 
-    def upload(self, file_manager):
-        self.file_manager = file_manager
+    def upload(self):
+
         self.start_server()
         respond = self.peer_server.announce_request("STARTED")
         print(respond)
@@ -82,6 +85,20 @@ class Peer:
     def scrape_tracker(self):
         respond = self.peer_server.scrape_request()
         print(respond)
+
+    def stop(self):
+        self.is_running = False
+        self.peer_server.announce_request("STOPPED")
+
+        for peer_handler, thread in self.peers_and_threads:
+            thread.join()
+            peer_handler.stop()
+
+        if self.peer_server_thread:
+            self.peer_server_thread.join()
+
+        self.peer_server_thread = None
+        self.peers_and_threads = []
 
     def callback(self, peer_id, event_type, data=None)->dict:
         """
@@ -121,6 +138,7 @@ class Peer:
             is_complete = self.file_manager.check_complete()
             if is_complete:
                 self.file_manager.export(self.name)
+                self.peer_server.announce_request("COMPLETED")
             return is_complete
 
 
@@ -143,6 +161,8 @@ class Peer:
             conn, addr = server_socket.accept()
             peer_handler = PeerHandler(conn, addr, self.info_hash, self.peer_id, self.callback)
             thread = threading.Thread(target=peer_handler.run)
+
+            self.peers_and_threads.append((peer_handler, thread))
             thread.start()
 
 
