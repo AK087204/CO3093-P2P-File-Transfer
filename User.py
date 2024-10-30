@@ -1,7 +1,9 @@
+
 from datetime import datetime
 import os
 
-from FileManager import FileManager
+from threading import Thread
+
 
 from FileManager import FileManager
 from info import *
@@ -13,33 +15,31 @@ import socket
 class User:
     def __init__(self, userId, name:str = "Anonymous"):
         self.name = name
-        self.peerList = []
+        self.peers_and_threads = []
         self.userId = userId
 
-    def download(self):
-        isTorrent = False
-
-        if isTorrent:
-            torrent_file = input("Please input file path: ")
-            info = TorrentUtils.get_info_from_file(torrent_file)
+    def download(self, file):
+        if self.isTorrent(file):
+            info = TorrentUtils.get_info_from_file(file)
         else:
-            magnet_link = input("Please input magnet link: ")
-            info = TorrentUtils.get_info_from_magnet(magnet_link)
+            info = TorrentUtils.get_info_from_magnet(file)
 
         ip, port = self._get_ip_port()
-        peer = Peer(ip, port, info)
+        file_manager = FileManager(info["length"])
+        peer = Peer(ip, port, info, file_manager)
+        thread = Thread(target=peer.download)
 
-        self.peerList.append(peer.peer_id)
-        peer.download()
+        self.peers_and_threads.append((peer, thread))
+
+        thread.start()
 
 
-    def share(self):
-        path = input("Nhập vào đường dẫn đến file hoặc directory: ")
+
+    def share(self, path):
         total_length = os.path.getsize(path)
         print("Total length",total_length)
         file_manager = FileManager(total_length)
         file_manager.split_file(path)
-        print("Bitfield:", file_manager.get_bitfield())
         if os.path.isdir(path):
             magnet_link = self._input_directory(path, file_manager)
         elif os.path.isfile(path):
@@ -51,26 +51,42 @@ class User:
 
         info = TorrentUtils.get_info_from_magnet(magnet_link)
         ip, port = self._get_ip_port()
-        peer = Peer(ip, port, info)
-        self.peerList.append(peer.peer_id)
+        peer = Peer(ip, port, info, file_manager)
+        thread = Thread(target=peer.upload)
 
-        peer.upload(file_manager)
+        self.peers_and_threads.append((peer, thread))
+
+        thread.start()
 
 
-    def scrape_tracker(self):
-        isTorrent = False
+    def scrape_tracker(self, file):
 
-        if isTorrent:
-            torrent_file = input("Please input file path: ")
-            info = TorrentUtils.get_info_from_file(torrent_file)
+        if self.isTorrent(file):
+            info = TorrentUtils.get_info_from_file(file)
         else:
-            magnet_link = input("Please input magnet link: ")
-            info = TorrentUtils.get_info_from_magnet(magnet_link)
+            info = TorrentUtils.get_info_from_magnet(file)
 
         ip, port = self._get_ip_port()
-        peer = Peer(ip, port, info)
-        self.peerList.append(peer.peer_id)
-        peer.scrape_tracker()
+        file_manager = FileManager(info["length"])
+        peer = Peer(ip, port, info, file_manager)
+        thread = Thread(target=peer.scrape_tracker)
+
+        self.peers_and_threads.append((peer, thread))
+
+        thread.start()
+
+    def stop(self, peer_id):
+        for peer, thread in self.peers_and_threads:
+            if peer_id == peer.peer_id:
+                peer.stop()
+                thread.join()
+                self.peers_and_threads.remove((peer, thread))
+
+    def stop_all(self):
+        for peer, thread in self.peers_and_threads:
+            peer.stop()
+            thread.join()
+            self.peers_and_threads.remove((peer, thread))
 
 
     def _input_directory(self, dir_path, file_manager):
@@ -134,3 +150,17 @@ class User:
             port = s.getsockname()[1]  # Lấy port đã bind
         return ip_address, port
 
+    def isTorrent(self, file):
+        if not file.endswith(".torrent"):
+            return False
+
+        try:
+            with open(file, "rb") as f:
+                content = f.read()
+                # Kiểm tra các từ khóa Bencode đặc trưng
+                if b"announce" in content and b"info" in content and b"pieces" in content:
+                    return True
+        except Exception as e:
+            print("Error reading file:", e)
+
+        return False

@@ -1,3 +1,4 @@
+import socket
 import struct
 import threading
 import time
@@ -46,7 +47,6 @@ class PeerHandler:
         self.running = True
         self.listen_thread = None
         self.request_thread = None
-
         # Peer state
         self.bitfield = None
         self.pending_requests = {}  # {(index, begin): request_time}
@@ -60,14 +60,15 @@ class PeerHandler:
 
     def run(self):
         if self.two_way_handshake():
+            self.send_bitfield()
 
             # Start listening thread
             self.listen_thread = threading.Thread(target=self.listen)
             self.listen_thread.start()
 
-            # Start request thread (will only send requests when unchoked)
-            self.request_thread = threading.Thread(target=self.requests)
+            self.request_thread = threading.Thread(target=self.request)
             self.request_thread.start()
+
 
     def listen(self):
         while self.running:
@@ -103,7 +104,15 @@ class PeerHandler:
                 print(f"Error in listen loop: {e}")
                 break
 
+
+    def request(self):
+        while self.running:
+            pass
+
+    def stop(self):
         self.running = False
+        self.conn.close()
+
 
     def handle_message(self, message_type, payload):
         try:
@@ -177,11 +186,6 @@ class PeerHandler:
 
         except Exception as e:
             print(f"Error handling message type {message_type}: {e}")
-
-    def requests(self):
-        while self.running:
-            self.send_bitfield()
-            break
 
 
     def two_way_handshake(self):
@@ -315,7 +319,8 @@ class PeerHandler:
             message_type_int = message_type.value
             message_length = len(payload) + 1  # +1 for message type
             message = struct.pack('>IB', message_length, message_type_int) + payload
-            print("Packed message:", message)  # Debug packed message
+            if message_type != MessageType.PIECE:
+                print("Packed message:", message)  # Debug packed message
 
             self.conn.send(message)
         except Exception as e:

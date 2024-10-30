@@ -34,8 +34,8 @@ class TorrentUtils:
     def get_info_from_magnet(magnet_link):
         # Phân tích URL từ magnet link
         parsed_url = urllib.parse.urlparse(magnet_link)
-        if parsed_url.scheme != 'magnet':
-            raise ValueError("Link không phải là magnet link hợp lệ.")
+        # if parsed_url.scheme != 'magnet':
+        #     raise ValueError("Link không phải là magnet link hợp lệ.")
 
         # Tách các tham số từ magnet link
         params = urllib.parse.parse_qs(parsed_url.query)
