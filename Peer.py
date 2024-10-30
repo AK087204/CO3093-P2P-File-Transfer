@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 import urllib.parse
 import threading
@@ -7,8 +8,10 @@ import random
 import string
 import json
 
+from django.template.defaultfilters import length
+
 from PeerHandler import PeerHandler
-from FileManager import FileManager
+from FileManager import FileManager, Piece
 
 from PeerServer import PeerServer
 EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
@@ -81,7 +84,7 @@ class Peer:
         Callback function để xử lý các sự kiện từ PeerHandler
         """
         if event_type == 'bitfield_received':
-            bitfield = data['bitfield']
+            bitfield = bytes(data['bitfield'])
             with self.lock:
                 # Lưu lại bitfield nhận được từ PeerHandler
                 self.bitfields[peer_id] = bitfield
@@ -92,13 +95,29 @@ class Peer:
         elif event_type == 'request_bitfield':
             return  {'bitfield' : self.file_manager.get_bitfield()}
 
-        elif event_type == 'request_piece':
+        elif event_type == 'request_piece_index':
             index = self.get_rarest_piece()
-            return {'index': index, 'begin': 0, 'length': 0}
+            print("Piece index: ", index)
+            length = self.file_manager.get_exact_piece_length(index)
+
+            return {'index': index, 'begin': 0, 'length': length}
+
+        elif event_type == 'request_piece':
+            index = int(data['index'])
+            return self.file_manager.get_piece(index)
 
         elif event_type == 'piece_received':
-            piece = data['piece']
+            index = int(data['index'])
+            begin = int(data['begin'])
+            data = data['block']
+            hash_value = hashlib.sha256(data).hexdigest()
+            piece = Piece(index, data, hash_value)
+
             self.file_manager.add_piece(piece)
+            is_complete = self.file_manager.check_complete()
+            if is_complete:
+                self.file_manager.export()
+            return is_complete
 
 
     def start_server(self):
@@ -127,8 +146,8 @@ class Peer:
         """
         Cập nhật tần suất xuất hiện của mỗi piece dựa trên bitfield nhận được
         """
-        total_pieces = self.file_manager.get_total_pieces()
-        for piece_index in range(total_pieces):
+
+        for piece_index in range(self.file_manager.get_total_pieces()):
             byte_index = piece_index // 8
             bit_index = piece_index % 8
 
