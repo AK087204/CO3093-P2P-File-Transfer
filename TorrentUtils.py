@@ -3,32 +3,14 @@ import hashlib
 import base64
 import urllib.parse
 
+
 class TorrentUtils:
 
     @staticmethod
     def get_info_from_file(torrent_file):
-        """
-        Get the hash of info in torrent file.
-        :param torrent_file:
-        :return: hash code
-        """
-        with open(torrent_file, 'rb') as f:
-            file_data = f.read()
-
-        metadata = bencodepy.decode(file_data)
-        subj = metadata[b'info']
-        # Nếu torrent là một directory, sẽ có 'files' thay vì 'length'
-        if b'files' in subj:
-            # Tính tổng kích thước của tất cả các file trong directory
-            total_length = sum(file[b'length'] for file in subj[b'files'])
-        else:
-            # Nếu không phải directory, sử dụng 'length' của file đơn
-            total_length = subj[b'length']
-
-        hash_contents = bencodepy.encode(subj)
-        digest = hashlib.sha1(hash_contents).digest()
-        b32hash = base64.b32encode(digest).decode()
-        return b32hash, total_length
+        with open(torrent_file, 'rb') as file:
+            torrent_content = bencodepy.decode(file.read())
+        return torrent_content
 
     @staticmethod
     def get_info_from_magnet(magnet_link):
@@ -110,3 +92,16 @@ class TorrentUtils:
             + tracker_params \
             + '&xl=' + str(total_length)
 
+
+
+if __name__ == '__main__':
+    torrent_file_path = 'Torrents/1_novel.torrent'
+    # piece_file_map = TorrentUtils.build_piece_file_map_from_torrent(torrent_file_path)
+    #
+    # # In ra kết quả
+    # for piece_index, mappings in enumerate(piece_file_map):
+    #     print(f"Piece {piece_index}:")
+    #     for mapping in mappings:
+    #         print(f"  File: {mapping['file']}, Offset: {mapping['offset']}, Length: {mapping['length']}")
+
+    print(TorrentUtils.get_info_from_file(torrent_file_path))

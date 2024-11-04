@@ -15,7 +15,7 @@ class App:
         self.share_button.pack(pady=10)
 
         # Download Button
-        self.download_button = tk.Button(root, text="Download from Magnet/Torrent", command=self.download)
+        self.download_button = tk.Button(root, text="Download from Torrent", command=self.download)
         self.download_button.pack(pady=10)
 
         # Scrape Button
@@ -31,19 +31,27 @@ class App:
         self.stop_all_button.pack(pady=10)
 
     def share(self):
-        path = filedialog.askopenfilename(title="Select File or Directory")
+        # Hỏi người dùng muốn chọn tệp hay thư mục
+        choice = messagebox.askyesno("Share", "Do you want to share a folder? (Choose 'No' to select a file)")
+
+        # Nếu chọn chia sẻ thư mục
+        if choice:
+            path = filedialog.askdirectory(title="Select Directory")
+        else:
+            path = filedialog.askopenfilename(title="Select File")
+
         if path:
             magnet_link = self.user.share(path)
             messagebox.showinfo("Magnet Link", f"Magnet link: {magnet_link}")
 
     def download(self):
-        choice = messagebox.askyesno("Download", "Do you want to enter a Magnet Link? (Choose 'No' to select a Torrent File)")
-        if choice:
-            magnet_link = simpledialog.askstring("Magnet Link", "Enter Magnet Link:")
-            if magnet_link:
-                self.user.download(magnet_link)
-                messagebox.showinfo("Download", "Download started with Magnet Link!")
-        else:
+        # choice = messagebox.askyesno("Download", "Do you want to enter a Magnet Link? (Choose 'No' to select a Torrent File)")
+        # if choice:
+        #     magnet_link = simpledialog.askstring("Magnet Link", "Enter Magnet Link:")
+        #     if magnet_link:
+        #         self.user.download(magnet_link)
+        #         messagebox.showinfo("Download", "Download started with Magnet Link!")
+        # else:
             torrent_file = filedialog.askopenfilename(title="Select Torrent File")
             if torrent_file:
                 self.user.download(torrent_file)

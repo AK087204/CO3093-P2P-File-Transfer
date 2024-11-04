@@ -19,14 +19,21 @@ class User:
         self.userId = userId
 
     def download(self, file):
-        if self.isTorrent(file):
-            info = TorrentUtils.get_info_from_file(file)
-        else:
-            info = TorrentUtils.get_info_from_magnet(file)
+        # if self.isTorrent(file):
+        info_torrent = TorrentUtils.get_info_from_file(file)
+        # else:
+        #     info = TorrentUtils.get_info_from_magnet(file)
 
         ip, port = self._get_ip_port()
-        file_manager = FileManager(info["length"])
+        file_manager = FileManager(info_torrent[b'info'])
+
+        with open(file, 'rb') as file:
+            bencode_info = file.read()
+        magnet = TorrentUtils.make_magnet_from_bencode(bencode_info)
+        info = TorrentUtils.get_info_from_magnet(magnet)
+
         peer = Peer(ip, port, info, file_manager)
+        print(f"Peer ID: {peer.peer_id}")
         thread = Thread(target=peer.download)
 
         self.peers_and_threads.append((peer, thread))
@@ -36,13 +43,14 @@ class User:
 
 
     def share(self, path):
-        total_length = os.path.getsize(path)
-        print("Total length",total_length)
-        file_manager = FileManager(total_length)
-        file_manager.split_file(path)
+
+        file_manager = FileManager()
+
         if os.path.isdir(path):
+            file_manager.split_dir(path)
             magnet_link = self._input_directory(path, file_manager)
         elif os.path.isfile(path):
+            file_manager.split_file(path)
             magnet_link = self._input_file(path, file_manager)
         else:
             raise "Invalid path"
@@ -51,7 +59,9 @@ class User:
 
         info = TorrentUtils.get_info_from_magnet(magnet_link)
         ip, port = self._get_ip_port()
+
         peer = Peer(ip, port, info, file_manager)
+        print(f"Peer ID: {peer.peer_id}")
         thread = Thread(target=peer.upload)
 
         self.peers_and_threads.append((peer, thread))
@@ -61,13 +71,19 @@ class User:
 
     def scrape_tracker(self, file):
 
-        if self.isTorrent(file):
-            info = TorrentUtils.get_info_from_file(file)
-        else:
-            info = TorrentUtils.get_info_from_magnet(file)
+        # if self.isTorrent(file):
+        info_torrent = TorrentUtils.get_info_from_file(file)
+        # else:
+        #     info = TorrentUtils.get_info_from_magnet(file)
 
         ip, port = self._get_ip_port()
-        file_manager = FileManager(info["length"])
+        file_manager = FileManager(info_torrent[b'info'])
+
+        with open(file, 'rb') as file:
+            bencode_info = file.read()
+        magnet = TorrentUtils.make_magnet_from_bencode(bencode_info)
+        info = TorrentUtils.get_info_from_magnet(magnet)
+
         peer = Peer(ip, port, info, file_manager)
         thread = Thread(target=peer.scrape_tracker)
 
@@ -94,6 +110,7 @@ class User:
         Cho phép người dùng nhập vào một directory và chuyển nó thành bencode.
         """
         # Lấy các file trong directory và chuyển thành danh sách File
+        directory_name = os.path.basename(os.path.normpath(dir_path))
         files = []
         for root, dirs, file_names in os.walk(dir_path):
             for file_name in file_names:
@@ -103,14 +120,20 @@ class User:
                 files.append(File(file_size, file_relative_path))
 
         # Tạo InfoMultiFile cho directory
-        piece_length = file_manager.get_piece_length()  # Ví dụ số bytes trong mỗi phần
-        pieces = file_manager.get_pieces_code()  # Giả sử mảng byte trống cho ví dụ
+        piece_length = file_manager.get_piece_length()
+        pieces = file_manager.get_pieces_code()
         info = InfoMultiFile(piece_length, pieces, os.path.basename(dir_path), files)
 
         # Tạo MetaInfo cho torrent file
         meta_info = MetaInfo(info, 'http://localhost:5050', datetime.now(), 'No comment', self.name)
         encoded = meta_info.get_bencode()
-        TorrentUtils.create_torrent_file(encoded, 'download.torrent')
+
+        torrent_dir = "Torrents"
+        full_path = os.path.join(torrent_dir, f'{directory_name}.torrent')
+        if not os.path.exists(torrent_dir):
+            os.makedirs(torrent_dir)
+        TorrentUtils.create_torrent_file(encoded, full_path)
+
         magnet_link = TorrentUtils.make_magnet_from_bencode(encoded)
 
         return magnet_link
@@ -125,14 +148,20 @@ class User:
         file_size = os.path.getsize(file_path)
 
         # Tạo InfoSingleFile cho file
-        piece_length = file_manager.get_piece_length()  # Ví dụ số bytes trong mỗi phần
-        pieces = file_manager.get_pieces_code()  # Giả sử mảng byte trống cho ví dụ
+        piece_length = file_manager.get_piece_length()
+        pieces = file_manager.get_pieces_code()
         info = InfoSingleFile(piece_length, pieces, file_name, file_size)
 
         # Tạo MetaInfo cho torrent file
         meta_info = MetaInfo(info, 'http://localhost:5050', datetime.now(), 'No comment', self.name)
         encoded = meta_info.get_bencode()
-        TorrentUtils.create_torrent_file(encoded, 'download.torrent')
+
+        torrent_dir = "Torrents"
+        full_path = os.path.join(torrent_dir, f'{file_name}.torrent')
+        if not os.path.exists(torrent_dir):
+            os.makedirs(torrent_dir)
+        TorrentUtils.create_torrent_file(encoded, full_path)
+
         magnet_link = TorrentUtils.make_magnet_from_bencode(encoded)
 
         return magnet_link
