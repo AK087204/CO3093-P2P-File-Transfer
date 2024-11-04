@@ -135,9 +135,12 @@ class Peer:
             piece = Piece(index, data, hash_value)
 
             self.file_manager.add_piece(piece)
+
             is_complete = self.file_manager.check_complete()
+
             if is_complete:
-                self.file_manager.export(self.name)
+                self.file_manager.export()
+
                 self.peer_server.announce_request("COMPLETED")
             return is_complete
 
@@ -185,10 +188,13 @@ class Peer:
         """
         Tìm ra piece hiếm nhất dựa trên tần suất xuất hiện trong các bitfield
         """
+        print("===================")
         rarest_piece = None
         min_frequency = float('inf')
+        print("Item: ",self.piece_frequencies)
         for piece_index, frequency in self.piece_frequencies.items():
             if frequency < min_frequency and not self.file_manager.has_piece(piece_index):
                 min_frequency = frequency
                 rarest_piece = piece_index
+        print("===================")
         return rarest_piece

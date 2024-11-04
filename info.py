@@ -10,10 +10,6 @@ class Info(ABC):
     def get_all_info(self) -> dict:
         return {'pieceLength':self.pieceLength, 'pieces':self.pieces}
 
-    @abstractmethod
-    def get_total_length(self) -> int:
-        pass
-
 class InfoSingleFile(Info):
     def __init__(self, pieceLength, pieces, name: str, length: int):
         super().__init__(pieceLength, pieces)
