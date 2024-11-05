@@ -12,22 +12,31 @@ from TorrentUtils import TorrentUtils
 from Peer import Peer
 import socket
 
+class Status:
+    def __init__(self):
+        self.connected = 1
+        self.download_speed = 0.0
+        self.upload_speed = 0.0
+        self.peer_count = 0
+
+
 class User:
     def __init__(self, userId, name:str = "Anonymous"):
         self.name = name
+        self.peers = []
         self.peers_and_threads = []
         self.userId = userId
 
-    def download(self, file):
+    def download(self, file_path, save_path):
         # if self.isTorrent(file):
-        info_torrent = TorrentUtils.get_info_from_file(file)
+        info_torrent = TorrentUtils.get_info_from_file(file_path)
         # else:
         #     info = TorrentUtils.get_info_from_magnet(file)
 
         ip, port = self._get_ip_port()
         file_manager = FileManager(info_torrent[b'info'])
 
-        with open(file, 'rb') as file:
+        with open(file_path, 'rb') as file:
             bencode_info = file.read()
         magnet = TorrentUtils.make_magnet_from_bencode(bencode_info)
         info = TorrentUtils.get_info_from_magnet(magnet)
@@ -36,7 +45,7 @@ class User:
         print(f"Peer ID: {peer.peer_id}")
         thread = Thread(target=peer.download)
 
-        self.peers_and_threads.append((peer, thread))
+        self.peers_and_threads.append((peer.peer_id, thread))
 
         thread.start()
 
@@ -92,17 +101,24 @@ class User:
         thread.start()
 
     def stop(self, peer_id):
-        for peer, thread in self.peers_and_threads:
+        for id, thread in self.peers_and_threads:
+            if peer_id == id:
+                thread.join()
+                self.peers_and_threads.remove((id, thread))
+
+        for peer in self.peers:
             if peer_id == peer.peer_id:
                 peer.stop()
-                thread.join()
-                self.peers_and_threads.remove((peer, thread))
+                self.peers.remove(peer)
 
     def stop_all(self):
-        for peer, thread in self.peers_and_threads:
-            peer.stop()
+        for peer_id, thread in self.peers_and_threads:
             thread.join()
-            self.peers_and_threads.remove((peer, thread))
+            self.peers_and_threads.remove((peer_id, thread))
+
+        for peer in self.peers:
+            peer.stop()
+            self.peers.remove(peer)
 
 
     def _input_directory(self, dir_path, file_manager):
@@ -193,3 +209,23 @@ class User:
             print("Error reading file:", e)
 
         return False
+
+    def ban_peer(self, peer_id, peer_ip):
+        pass
+
+    def get_peers(self):
+        return self.peers
+
+    def get_statistics(self):
+        """
+
+        :return:
+        {
+        'connected': Boolean,
+        'download_speed': float,
+        'upload_speed': float,
+        'peer_count': int
+         }
+        """
+        status = Status()
+        return status
