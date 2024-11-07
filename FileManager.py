@@ -18,7 +18,7 @@ class Piece:
         return self.data
 
 class FileManager:
-    def __init__(self, info= None):
+    def __init__(self, save_path= None, info= None):
         if info:
             print(info)
             self.piece_length = info[b'pieceLength']
@@ -27,14 +27,20 @@ class FileManager:
             pieces = info[b'pieces']
             self.total_pieces = len(pieces) // 40
 
-            print("Piece file map: ",self.piece_file_map)
         else:
             self.piece_length = 524288
             self.total_length = 0
             self.piece_file_map = {}
             self.total_pieces = 0
 
+        if save_path:
+            self.save_path = save_path
+        else:
+            self.save_path = 'download'
         self.pieces = []
+
+    def __len__(self):
+        return len(self.pieces)
 
     def get_piece_length(self):
         return self.piece_length
@@ -164,9 +170,9 @@ class FileManager:
 
     def export(self):
         # Tạo thư mục 'download' nếu chưa tồn tại
-        download_dir = 'download'
-        if not os.path.exists(download_dir):
-            os.makedirs(download_dir)
+
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
 
         # Khởi tạo bộ đệm cho mỗi file
         file_buffers = {}
@@ -185,7 +191,7 @@ class FileManager:
 
                 # Đảm bảo file buffer được mở và sẵn sàng để ghi
                 if file_name not in file_buffers:
-                    file_path = os.path.join(download_dir, file_name)
+                    file_path = os.path.join(self.save_path, file_name)
                     file_buffers[file_name] = open(file_path, 'wb')
 
                 # Ghi dữ liệu của piece vào file đích tại vị trí offset
