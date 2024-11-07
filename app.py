@@ -9,7 +9,7 @@ import json
 import os
 from dataclasses import dataclass
 from enum import Enum
-
+import json as js
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +27,13 @@ class TransferStatus(Enum):
 
 
 @dataclass
+class ScrapeRecord:
+    id: str
+    path: str
+    start_time: datetime
+
+
+@dataclass
 class TransferRecord:
     id: str
     type: str  # 'upload' or 'download'
@@ -41,6 +48,7 @@ class TransferRecord:
 
 class BitTorrentApp:
     def __init__(self, root):
+        self.scrapes_tree = None
         self.status_labels = None
         self.peers_tree = None
         self.status_tab = None
@@ -60,6 +68,7 @@ class BitTorrentApp:
         self.user: Optional[User.User] = None
         self.root = root
         self.transfers: dict[str, TransferRecord] = {}
+        self.scrapes: dict[str, ScrapeRecord] = {}
         self.current_theme = "light"
         self.setup_window()
         self.load_settings()
@@ -348,12 +357,12 @@ class BitTorrentApp:
         self.transfers_tab = self.create_transfers_tab()
         self.peers_tab = self.create_peers_tab()
         self.status_tab = self.create_status_tab()
-
+        self.scrape_tab = self.create_scrape_tab()
         # Add tabs to notebook
         self.notebook.add(self.transfers_tab, text="Transfers")
         self.notebook.add(self.peers_tab, text="Peers")
         self.notebook.add(self.status_tab, text="Status")
-
+        self.notebook.add(self.scrape_tab, text="Scrape")
         # Create status bar
         self.create_status_bar()
 
@@ -377,11 +386,11 @@ class BitTorrentApp:
             command=self.add_torrent
         ).pack(side="left", padx=2)
 
-        ttk.Button(
-            toolbar,
-            text="Add Magnet",
-            command=self.add_magnet
-        ).pack(side="left", padx=2)
+        # ttk.Button(
+        #     toolbar,
+        #     text="Add Magnet",
+        #     command=self.add_magnet
+        # ).pack(side="left", padx=2)
 
         # Transfers table
         columns = ("Name", "Status", "Progress", "Speed", "Peers")
@@ -417,6 +426,37 @@ class BitTorrentApp:
         self.transfers_tree.pack(fill="both", expand=True)
         y_scroll.pack(side="right", fill="y")
         x_scroll.pack(side="bottom", fill="x")
+
+        return frame
+
+    def create_scrape_tab(self):
+        frame = ttk.Frame(self.notebook)
+
+        # Peers list
+        columns = ("ID", "Name", "Tracker Server", "Peers")
+        self.scrapes_tree = ttk.Treeview(
+            frame,
+            columns=columns,
+            show="headings"
+        )
+
+        for col in columns:
+            self.scrapes_tree.heading(col, text=col)
+            self.scrapes_tree.column(col, width=100)
+
+        # Toolbar
+        toolbar = ttk.Frame(frame)
+        toolbar.pack(fill="x", padx=5, pady=5)
+
+        ttk.Button(
+            toolbar,
+            text="Scrape",
+            command=self.scrape
+        ).pack(side="left", padx=2)
+
+
+        # Pack elements
+        self.scrapes_tree.pack(fill="both", expand=True)
 
         return frame
 
@@ -558,20 +598,56 @@ class BitTorrentApp:
             popup.destroy()
 
             if selected_value == "Share file":
-                file_path = filedialog.askopenfilename(
+                path = filedialog.askopenfilename(
                     title="Select File",
                 )
-                self.user.share(file_path)
             else:
-                dir_path = filedialog.askdirectory(
+                path = filedialog.askdirectory(
                     title="Select Directory",
                 )
-                self.user.share(dir_path)
+
+            # Start the download using User library
+            peer_id = self.user.share(path)
+
+            self.transfers[peer_id] = TransferRecord(
+                id=peer_id,
+                type="share",
+                path=path,
+                status=TransferStatus.PENDING,
+                start_time=datetime.now()
+            )
+
+
+            self.update_transfers_view()
+            self.log_activity(f"Started sharing {os.path.basename(path)}")
 
 
         # Nút để xác nhận lựa chọn
         confirm_button = tk.Button(popup, text="Confirm", command=get_selection)
         confirm_button.pack(pady=10)
+
+    def scrape(self):
+
+        try:
+            file_path = filedialog.askopenfilename(
+                title="Select Torrent File",
+                filetypes=[("Torrent files", "*.torrent")]
+            )
+
+            scrape_id = self.user.scrape_tracker(file_path)
+
+            self.scrapes[scrape_id] = ScrapeRecord(
+                id=scrape_id,
+                path=file_path,
+                start_time=datetime.now()
+            )
+
+            self.update_scrape_view()
+            self.update_transfers_view()
+            self.log_activity(f"Started scraping {os.path.basename(file_path)}")
+        except Exception as e:
+            logging.error(f"Failed to scrape: {e}")
+            messagebox.showerror("Error", "Failed to scrape")
 
     def add_torrent(self):
         """Add a new torrent file"""
@@ -588,7 +664,9 @@ class BitTorrentApp:
                 )
 
                 if save_path:
-                    transfer_id = str(uuid.uuid4())
+                    # Start the download using User library
+                    transfer_id = self.user.download(file_path, save_path)
+
                     self.transfers[transfer_id] = TransferRecord(
                         id=transfer_id,
                         type="download",
@@ -597,8 +675,7 @@ class BitTorrentApp:
                         start_time=datetime.now()
                     )
 
-                    # Start the download using User library
-                    self.user.download(file_path, save_path)
+
                     self.update_transfers_view()
                     self.log_activity(f"Started downloading {os.path.basename(file_path)}")
 
@@ -606,39 +683,39 @@ class BitTorrentApp:
             logging.error(f"Failed to add torrent: {e}")
             messagebox.showerror("Error", "Failed to add torrent")
 
-    def add_magnet(self):
-        """Add a new magnet link"""
-        try:
-            magnet_link = simpledialog.askstring(
-                "Add Magnet Link",
-                "Enter magnet link:",
-                parent=self.root
-            )
-
-            if magnet_link:
-                save_path = filedialog.askdirectory(
-                    title="Select Save Location",
-                    initialdir=self.settings["default_save_path"]
-                )
-
-                if save_path:
-                    transfer_id = str(uuid.uuid4())
-                    self.transfers[transfer_id] = TransferRecord(
-                        id=transfer_id,
-                        type="download",
-                        path=magnet_link,
-                        status=TransferStatus.PENDING,
-                        start_time=datetime.now()
-                    )
-
-                    # Start the download using User library
-                    self.user.download(magnet_link, save_path)
-                    self.update_transfers_view()
-                    self.log_activity("Started downloading from magnet link")
-
-        except Exception as e:
-            logging.error(f"Failed to add magnet link: {e}")
-            messagebox.showerror("Error", "Failed to add magnet link")
+    # def add_magnet(self):
+    #     """Add a new magnet link"""
+    #     try:
+    #         magnet_link = simpledialog.askstring(
+    #             "Add Magnet Link",
+    #             "Enter magnet link:",
+    #             parent=self.root
+    #         )
+    #
+    #         if magnet_link:
+    #             save_path = filedialog.askdirectory(
+    #                 title="Select Save Location",
+    #                 initialdir=self.settings["default_save_path"]
+    #             )
+    #
+    #             if save_path:
+    #                 transfer_id = str(uuid.uuid4())
+    #                 self.transfers[transfer_id] = TransferRecord(
+    #                     id=transfer_id,
+    #                     type="download",
+    #                     path=magnet_link,
+    #                     status=TransferStatus.PENDING,
+    #                     start_time=datetime.now()
+    #                 )
+    #
+    #                 # Start the download using User library
+    #                 self.user.download(magnet_link, save_path)
+    #                 self.update_transfers_view()
+    #                 self.log_activity("Started downloading from magnet link")
+    #
+    #     except Exception as e:
+    #         logging.error(f"Failed to add magnet link: {e}")
+    #         messagebox.showerror("Error", "Failed to add magnet link")
 
     def update_transfers_view(self):
         """Update the transfers treeview with current transfer information"""
@@ -651,15 +728,16 @@ class BitTorrentApp:
 
             # Add current transfers
             for transfer in self.transfers.values():
+                value = self.user.get_transfer_information(transfer.id)
                 self.transfers_tree.insert(
                     "",
                     "end",
                     values=(
                         os.path.basename(transfer.path),
                         transfer.status.value,
-                        f"{transfer.progress:.1f}%",
-                        f"{transfer.speed:.1f} KB/s",
-                        transfer.peers
+                        f"{value['progress']:.1f}%",
+                        f"{value['speed']:.1f} KB/s",
+                        value['peers']
                     )
                 )
         except Exception as e:
@@ -669,6 +747,7 @@ class BitTorrentApp:
         """Disconnect selected peer"""
         try:
             selected = self.peers_tree.selection()
+
             if not selected:
                 messagebox.showwarning(
                     "Warning",
@@ -719,6 +798,11 @@ class BitTorrentApp:
             return
 
         try:
+            selected_peer_ids = [
+                self.peers_tree.item(item)['values'][0]  # Lấy peer_id từ cột đầu tiên (giả sử là cột đầu tiên)
+                for item in self.peers_tree.selection()
+            ]
+
             # Clear existing items
             for item in self.peers_tree.get_children():
                 self.peers_tree.delete(item)
@@ -727,19 +811,25 @@ class BitTorrentApp:
             peers = self.user.get_peers()  # Implement this in User library
 
             # Add current peers
-            for peer in peers:
-                self.peers_tree.insert(
+            for peer_id in peers:
+                value = peers[peer_id].get_transfer_information()
+                new_item = self.peers_tree.insert(
                     "",
                     "end",
                     values=(
-                        peer.peer_id,
-                        peer.peer_ip,
-                        peer.peer_port,
-                        peer.client,
-                        peer.flags,
-                        f"{peer.progress:.1f}%"
-                    )
+                        peer_id,
+                        peers[peer_id].peer_ip,
+                        peers[peer_id].peer_port,
+                        value['peers'],
+                        # peers[peer_id].flags,
+                        "STARTED",
+                        f"{value['progress']:.1f}%"
+                    ),
+
                 )
+                if peer_id in selected_peer_ids:
+                    self.peers_tree.selection_add(new_item)
+
         except Exception as e:
             logging.error(f"Failed to update peers view: {e}")
 
@@ -783,6 +873,37 @@ class BitTorrentApp:
 
         except Exception as e:
             logging.error(f"Failed to update status bar: {e}")
+
+    def update_scrape_view(self):
+        if self.scrapes_tree is None:
+            return
+        try:
+            # Clear existing items
+            for item in self.scrapes_tree.get_children():
+                self.scrapes_tree.delete(item)
+
+            # Add current transfers
+            for scrape in self.scrapes.values():
+                value = self.user.get_scrape_information(scrape.id)
+                if value == "No information":
+                    continue
+                else:
+                    value = js.loads(value)
+                    self.scrapes_tree.insert(
+                        "",
+                        "end",
+                        values=(
+                            scrape.id,
+                            os.path.basename(scrape.path),
+                            value["tracker_id"],
+                            value["total_peers"]
+                        )
+                    )
+        except Exception as e:
+            logging.error(f"Failed to update transfers view: {e}")
+
+
+
 
     def show_settings(self):
         """Show settings dialog"""
@@ -903,6 +1024,7 @@ def main():
             app.update_transfers_view()
             app.update_peers_view()
             app.update_status_bar()
+            app.update_scrape_view()
             root.after(1000, update)  # Update every second
 
         root.after(1000, update)

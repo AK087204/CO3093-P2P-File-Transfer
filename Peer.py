@@ -8,6 +8,7 @@ import string
 import json
 
 
+
 from PeerHandler import PeerHandler
 from FileManager import FileManager, Piece
 
@@ -37,7 +38,7 @@ class Peer:
         self.piece_frequencies = {}  # Đếm tần suất xuất hiện của mỗi piece
         self.lock = threading.Lock()
 
-
+        self.scrape_response = ""
     def generate_peer_id(self):
         client_id = "PY"  # Two characters for client id (e.g., PY for Python)
         version = "0001"  # Four ascii digits for version number
@@ -83,8 +84,15 @@ class Peer:
         print(respond)
 
     def scrape_tracker(self):
-        respond = self.peer_server.scrape_request()
-        print(respond)
+        response = self.peer_server.scrape_request()
+        print("Scrape tracker: ", response)
+        self.scrape_response = response
+
+    def get_scrape_response(self):
+        if self.scrape_response != "":
+            return self.scrape_response
+        else:
+            return "No information"
 
     def stop(self):
         self.is_running = False
@@ -198,3 +206,7 @@ class Peer:
                 rarest_piece = piece_index
         print("===================")
         return rarest_piece
+
+    def get_transfer_information(self):
+        progress = len(self.file_manager)/ self.file_manager.get_total_pieces() * 100
+        return {"progress": progress, "peers": len(self.peers_and_threads), "speed": 0}

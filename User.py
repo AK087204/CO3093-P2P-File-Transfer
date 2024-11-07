@@ -23,7 +23,7 @@ class Status:
 class User:
     def __init__(self, userId, name:str = "Anonymous"):
         self.name = name
-        self.peers = []
+        self.peers: dict[str, Peer] = {}
         self.peers_and_threads = []
         self.userId = userId
 
@@ -34,7 +34,7 @@ class User:
         #     info = TorrentUtils.get_info_from_magnet(file)
 
         ip, port = self._get_ip_port()
-        file_manager = FileManager(info_torrent[b'info'])
+        file_manager = FileManager(save_path, info_torrent[b'info'])
 
         with open(file_path, 'rb') as file:
             bencode_info = file.read()
@@ -45,10 +45,11 @@ class User:
         print(f"Peer ID: {peer.peer_id}")
         thread = Thread(target=peer.download)
 
+        self.peers.update({peer.peer_id: peer})
         self.peers_and_threads.append((peer.peer_id, thread))
 
         thread.start()
-
+        return peer.peer_id
 
 
     def share(self, path):
@@ -73,9 +74,11 @@ class User:
         print(f"Peer ID: {peer.peer_id}")
         thread = Thread(target=peer.upload)
 
+        self.peers.update({peer.peer_id: peer})
         self.peers_and_threads.append((peer, thread))
 
         thread.start()
+        return peer.peer_id
 
 
     def scrape_tracker(self, file):
@@ -86,7 +89,7 @@ class User:
         #     info = TorrentUtils.get_info_from_magnet(file)
 
         ip, port = self._get_ip_port()
-        file_manager = FileManager(info_torrent[b'info'])
+        file_manager = FileManager(info=info_torrent[b'info'])
 
         with open(file, 'rb') as file:
             bencode_info = file.read()
@@ -96,29 +99,31 @@ class User:
         peer = Peer(ip, port, info, file_manager)
         thread = Thread(target=peer.scrape_tracker)
 
+
+        self.peers.update({peer.peer_id: peer})
         self.peers_and_threads.append((peer, thread))
 
         thread.start()
+        return peer.peer_id
+
 
     def stop(self, peer_id):
-        for id, thread in self.peers_and_threads:
+        for peer_id, thread in self.peers_and_threads:
             if peer_id == id:
                 thread.join()
                 self.peers_and_threads.remove((id, thread))
 
-        for peer in self.peers:
-            if peer_id == peer.peer_id:
-                peer.stop()
-                self.peers.remove(peer)
+        self.peers[peer_id].stop()
+        self.peers.pop(peer_id)
 
     def stop_all(self):
         for peer_id, thread in self.peers_and_threads:
             thread.join()
             self.peers_and_threads.remove((peer_id, thread))
 
-        for peer in self.peers:
-            peer.stop()
-            self.peers.remove(peer)
+        for peer_id in self.peers:
+            self.peers[peer_id].stop()
+            self.peers.pop(peer_id)
 
 
     def _input_directory(self, dir_path, file_manager):
@@ -229,3 +234,9 @@ class User:
         """
         status = Status()
         return status
+
+    def get_transfer_information(self, peer_id):
+        return self.peers[peer_id].get_transfer_information()
+
+    def get_scrape_information(self, peer_id):
+        return self.peers[peer_id].get_scrape_response()
