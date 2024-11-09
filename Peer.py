@@ -68,15 +68,19 @@ class Peer:
             ip = peer["ip"]
             port = int(peer["port"])
 
+            if ip == self.peer_ip and port == self.peer_port:
+                continue
+
             conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             conn.connect((ip, port))
             peer_handler = PeerHandler(conn, (ip, port), self.info_hash, self.peer_id, self.callback)
             thread = Thread(target=peer_handler.run)
 
-            self.peer_handlers.update({(ip, port): peer_handler})
-            self.threads.update({(ip, port): thread})
-            print(self.peer_handlers.keys())
-            thread.start()
+            with self.lock:
+                self.peer_handlers.update({(ip, port): peer_handler})
+                self.threads.update({(ip, port): thread})
+
+                thread.start()
 
 
     def upload(self):
@@ -105,19 +109,38 @@ class Peer:
             self.peer_handlers[(ip, port)].stop()
             self.peer_handlers.pop((ip, port))
 
-        for (ip, port) in list(self.threads):
+        for (ip, port) in list(self.threads.keys()):
             self.threads[(ip, port)].join()
             self.threads.pop((ip, port))
+
         if self.peer_server_thread:
             self.peer_server_thread.join()
 
-
     def stop_peer_handler(self, addr):
-        print("Stop connect to ", addr)
-        self.peer_handlers.pop((addr[0], addr[1]))
+        """Stop and clean up a peer handler and its thread"""
+        addr_key = (addr[0], addr[1])
 
-        self.threads[(addr[0], addr[1])].join()
-        self.threads.pop((addr[0], addr[1]))
+        with self.lock:
+            # Only proceed if the peer handler exists
+            if addr_key not in self.peer_handlers:
+                return
+
+            print(f"Stopping connection to {addr}")
+
+            # Get the handler and thread
+            handler = self.peer_handlers[addr_key]
+            thread = self.threads.get(addr_key)
+
+            # Stop the handler first
+            handler.stop()
+
+            # Remove from dictionaries
+            self.peer_handlers.pop(addr_key)
+
+            # If there's a thread and it's not the current thread
+            if thread and thread != threading.current_thread():
+                self.threads.pop(addr_key)
+                thread.join(timeout=5)
 
 
     def callback(self, peer_id, event_type, data=None)->dict:
@@ -187,11 +210,11 @@ class Peer:
                 ip, port = addr
                 peer_handler = PeerHandler(conn, addr, self.info_hash, self.peer_id, self.callback)
                 thread = threading.Thread(target=peer_handler.run)
+                with self.lock:
+                    self.peer_handlers[(ip, port)] = peer_handler
+                    self.threads[(ip, port)] = thread
 
-                self.peer_handlers[(ip, port)] = peer_handler
-                self.threads[(ip, port)] = thread
-                print(self.peer_handlers.keys())
-                thread.start()
+                    thread.start()
 
             except socket.timeout:
                 continue  # Kiểm tra lại `is_running` mỗi khi hết timeout

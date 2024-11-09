@@ -44,6 +44,10 @@ class PeerHandler:
         self.pending_requests = {}
         self.max_pending_requests = 5
 
+        # Lock for thread safety
+        self.cleanup_lock = threading.Lock()
+        self.cleanup_done = False
+
     def run(self):
         if self.two_way_handshake():
             self.send_bitfield()
@@ -58,8 +62,8 @@ class PeerHandler:
             self.listen_thread.join()
             self.request_thread.join()
         else:
-            self.callback(self.client_id, "stop", {"addr": self.addr})
-            self.stop()
+            self._cleanup()
+            self.callback(self.peer_id, "stop", {"addr": self.addr})
 
     def listen(self):
         try:
@@ -94,14 +98,8 @@ class PeerHandler:
         except Exception as e:
             print(f"Error in listen loop: {e}")
         finally:
-            # Only call callback if the stop wasn't initiated externally
-            if not self.stopped_externally:
-                self.callback(self.client_id, "stop", {"addr": self.addr})
-
-            # Clean up if not already stopped
-            if self.running:
-                self.running = False
-                self.conn.close()
+            self._cleanup()
+            self.callback(self.peer_id, "stop", {"addr": self.addr})
 
     def request(self):
         while self.running:
@@ -109,21 +107,18 @@ class PeerHandler:
 
     def stop(self):
         """Called by parent to stop the peer handler"""
-        if self.running:
-            self.stopped_externally = True  # Mark that stop was called externally
-            self.running = False
-            try:
-                self.conn.close()
-            except Exception:
-                pass  # Ignore any errors during close
+        self._cleanup()
 
-            if self.listen_thread and self.listen_thread.is_alive():
-                self.listen_thread.join()
-
-            if self.request_thread and self.request_thread.is_alive():
-                self.request_thread.join()
-
-
+    def _cleanup(self):
+        """Internal cleanup method with thread safety"""
+        with self.cleanup_lock:
+            if not self.cleanup_done:
+                self.running = False
+                try:
+                    self.conn.close()
+                except Exception:
+                    pass
+                self.cleanup_done = True
 
     def handle_message(self, message_type, payload):
         try:
