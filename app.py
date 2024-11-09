@@ -738,7 +738,7 @@ class BitTorrentApp:
                         transfer.status.value,
                         f"{value['progress']:.1f}%",
                         f"{value['speed']:.1f} KB/s",
-                        value['peers']
+                        value['peers'] + 1
                     )
                 )
         except Exception as e:
