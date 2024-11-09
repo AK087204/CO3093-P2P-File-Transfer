@@ -3,7 +3,7 @@ import struct
 import threading
 import time
 from enum import IntEnum
-from gc import callbacks
+from threading import Event
 
 
 class MessageType(IntEnum):
@@ -17,26 +17,16 @@ class MessageType(IntEnum):
     PIECE = 7
     CANCEL = 8
 
+
 class PeerHandler:
     def __init__(self, conn, addr, info_hash, peer_id, callback):
-        """
-                Initialize a PeerHandler instance.
-
-                Args:
-                    conn: Socket connection to peer
-                    addr: Peer address tuple (ip, port)
-                    info_hash: Torrent info hash
-                    peer_id: Our peer ID
-                    callback: Callback object for managing pieces
-        """
-
         self.conn = conn
         self.addr = addr
         self.info_hash = info_hash
         self.peer_id = peer_id
         self.callback = callback
-
         self.client_id = None
+
         # State flags
         self.am_choking = True
         self.am_interested = False
@@ -45,18 +35,14 @@ class PeerHandler:
 
         # Threading control
         self.running = True
+        self.stopped_externally = False  # New flag to track if stop was called externally
         self.listen_thread = None
         self.request_thread = None
+
         # Peer state
         self.bitfield = None
-        self.pending_requests = {}  # {(index, begin): request_time}
+        self.pending_requests = {}
         self.max_pending_requests = 5
-        self.last_message_time = time.time()
-
-        # Statistics
-        self.total_downloaded = 0
-        self.download_rate = 0
-        self.last_download_measurement = time.time()
 
     def run(self):
         if self.two_way_handshake():
@@ -69,10 +55,15 @@ class PeerHandler:
             self.request_thread = threading.Thread(target=self.request)
             self.request_thread.start()
 
+            self.listen_thread.join()
+            self.request_thread.join()
+        else:
+            self.callback(self.client_id, "stop", {"addr": self.addr})
+            self.stop()
 
     def listen(self):
-        while self.running:
-            try:
+        try:
+            while self.running:
                 # First read the message length (4 bytes)
                 length_prefix = self.conn.recv(4)
                 if not length_prefix:
@@ -88,7 +79,7 @@ class PeerHandler:
                 # Read the message type
                 message_type = struct.unpack("B", self.conn.recv(1))[0]
 
-                # Read the payload (length - 1 because we already read the message type)
+                # Read the payload
                 payload = b""
                 remaining = length - 1
                 while remaining > 0:
@@ -100,18 +91,38 @@ class PeerHandler:
 
                 self.handle_message(message_type, payload)
 
-            except Exception as e:
-                print(f"Error in listen loop: {e}")
-                break
+        except Exception as e:
+            print(f"Error in listen loop: {e}")
+        finally:
+            # Only call callback if the stop wasn't initiated externally
+            if not self.stopped_externally:
+                self.callback(self.client_id, "stop", {"addr": self.addr})
 
+            # Clean up if not already stopped
+            if self.running:
+                self.running = False
+                self.conn.close()
 
     def request(self):
         while self.running:
-            pass
+            time.sleep(1)
 
     def stop(self):
-        self.running = False
-        self.conn.close()
+        """Called by parent to stop the peer handler"""
+        if self.running:
+            self.stopped_externally = True  # Mark that stop was called externally
+            self.running = False
+            try:
+                self.conn.close()
+            except Exception:
+                pass  # Ignore any errors during close
+
+            if self.listen_thread and self.listen_thread.is_alive():
+                self.listen_thread.join()
+
+            if self.request_thread and self.request_thread.is_alive():
+                self.request_thread.join()
+
 
 
     def handle_message(self, message_type, payload):

@@ -30,7 +30,8 @@ class Peer:
         self.peer_server = PeerServer(self.peer_id, peer_ip, peer_port, self.info_hash)
 
         self.is_running = False
-        self.peers_and_threads = []
+        self.peer_handlers: dict[(str, int), PeerHandler] = {}
+        self.threads: dict[(str, int), Thread] = {}
         self.peer_server_thread = None
         self.file_manager = file_manager
 
@@ -72,8 +73,9 @@ class Peer:
             peer_handler = PeerHandler(conn, (ip, port), self.info_hash, self.peer_id, self.callback)
             thread = Thread(target=peer_handler.run)
 
-            self.peers_and_threads.append((peer_handler, thread))
-
+            self.peer_handlers.update({(ip, port): peer_handler})
+            self.threads.update({(ip, port): thread})
+            print(self.peer_handlers.keys())
             thread.start()
 
 
@@ -96,17 +98,27 @@ class Peer:
 
     def stop(self):
         self.is_running = False
+
         self.peer_server.announce_request("STOPPED")
 
-        for peer_handler, thread in self.peers_and_threads:
-            thread.join()
-            peer_handler.stop()
+        for (ip, port) in list(self.peer_handlers.keys()):
+            self.peer_handlers[(ip, port)].stop()
+            self.peer_handlers.pop((ip, port))
 
+        for (ip, port) in list(self.threads):
+            self.threads[(ip, port)].join()
+            self.threads.pop((ip, port))
         if self.peer_server_thread:
             self.peer_server_thread.join()
 
-        self.peer_server_thread = None
-        self.peers_and_threads = []
+
+    def stop_peer_handler(self, addr):
+        print("Stop connect to ", addr)
+        self.peer_handlers.pop((addr[0], addr[1]))
+
+        self.threads[(addr[0], addr[1])].join()
+        self.threads.pop((addr[0], addr[1]))
+
 
     def callback(self, peer_id, event_type, data=None)->dict:
         """
@@ -151,6 +163,9 @@ class Peer:
 
                 self.peer_server.announce_request("COMPLETED")
             return is_complete
+        elif event_type == 'stop':
+            addr = data['addr']
+            self.stop_peer_handler(addr)
 
 
     def start_server(self):
@@ -161,20 +176,27 @@ class Peer:
             self.peer_server_thread.start()
 
     def listen(self):
-        """
-        Hàm tạo ra nhiều thread cho các connect từ các peer khác
-        :return: void
-        """
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind(('0.0.0.0', self.peer_port))
         server_socket.listen(5)
-        while self.is_running:
-            conn, addr = server_socket.accept()
-            peer_handler = PeerHandler(conn, addr, self.info_hash, self.peer_id, self.callback)
-            thread = threading.Thread(target=peer_handler.run)
+        server_socket.settimeout(1)  # Đặt timeout cho socket
 
-            self.peers_and_threads.append((peer_handler, thread))
-            thread.start()
+        while self.is_running:
+            try:
+                conn, addr = server_socket.accept()
+                ip, port = addr
+                peer_handler = PeerHandler(conn, addr, self.info_hash, self.peer_id, self.callback)
+                thread = threading.Thread(target=peer_handler.run)
+
+                self.peer_handlers[(ip, port)] = peer_handler
+                self.threads[(ip, port)] = thread
+                print(self.peer_handlers.keys())
+                thread.start()
+
+            except socket.timeout:
+                continue  # Kiểm tra lại `is_running` mỗi khi hết timeout
+
+        server_socket.close()
 
 
     def update_piece_frequencies(self, bitfield):
@@ -196,17 +218,16 @@ class Peer:
         """
         Tìm ra piece hiếm nhất dựa trên tần suất xuất hiện trong các bitfield
         """
-        print("===================")
         rarest_piece = None
         min_frequency = float('inf')
-        print("Item: ",self.piece_frequencies)
+
         for piece_index, frequency in self.piece_frequencies.items():
             if frequency < min_frequency and not self.file_manager.has_piece(piece_index):
                 min_frequency = frequency
                 rarest_piece = piece_index
-        print("===================")
+
         return rarest_piece
 
     def get_transfer_information(self):
         progress = len(self.file_manager)/ self.file_manager.get_total_pieces() * 100
-        return {"progress": progress, "peers": len(self.peers_and_threads), "speed": 0}
+        return {"progress": progress, "peers": len(self.peer_handlers), "speed": 0}

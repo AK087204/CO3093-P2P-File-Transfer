@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 import uuid
-import User
+from User import User
 from typing import Optional
 import logging
 from datetime import datetime
@@ -65,7 +65,7 @@ class BitTorrentApp:
         self.menubar = None
         self.style = None
         self.transfers_tree = None
-        self.user: Optional[User.User] = None
+        self.user: Optional[User] = None
         self.root = root
         self.transfers: dict[str, TransferRecord] = {}
         self.scrapes: dict[str, ScrapeRecord] = {}
@@ -320,12 +320,13 @@ class BitTorrentApp:
         password = self.password_entry.get()
 
         try:
+
             username = self.username_entry.get().strip()
             if not username or not password:
                 raise ValueError("Username and password are required")
 
             # Here you would typically verify credentials with your User library
-            self.user = User.User(str(uuid.uuid4()), username)
+            self.user = User(str(uuid.uuid4()), username)
 
             # Save login state if remember me is checked
             if self.remember_var.get():
@@ -611,7 +612,7 @@ class BitTorrentApp:
 
             self.transfers[peer_id] = TransferRecord(
                 id=peer_id,
-                type="share",
+                type="upload",
                 path=path,
                 status=TransferStatus.PENDING,
                 start_time=datetime.now()
@@ -756,9 +757,17 @@ class BitTorrentApp:
                 return
 
             peer_id = self.peers_tree.item(selected[0])['values'][0]
+
+            if peer_id in self.transfers:
+                self.transfers.pop(peer_id)
+            elif peer_id in self.scrapes:
+                self.scrapes.pop(peer_id)
+
             self.user.stop(peer_id)
+
             self.log_activity(f"Disconnected peer: {peer_id}")
             self.update_peers_view()
+            self.update_transfers_view()
 
         except Exception as e:
             logging.error(f"Failed to disconnect peer: {e}")

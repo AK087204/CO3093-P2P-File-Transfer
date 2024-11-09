@@ -21,10 +21,10 @@ class Status:
 
 
 class User:
-    def __init__(self, userId, name:str = "Anonymous"):
+    def __init__(self, userId, name: str = "Anonymous"):
         self.name = name
         self.peers: dict[str, Peer] = {}
-        self.peers_and_threads = []
+        self.threads: dict[str, Thread] = {}
         self.userId = userId
 
     def download(self, file_path, save_path):
@@ -46,7 +46,7 @@ class User:
         thread = Thread(target=peer.download)
 
         self.peers.update({peer.peer_id: peer})
-        self.peers_and_threads.append((peer.peer_id, thread))
+        self.threads.update({peer.peer_id: thread})
 
         thread.start()
         return peer.peer_id
@@ -75,7 +75,7 @@ class User:
         thread = Thread(target=peer.upload)
 
         self.peers.update({peer.peer_id: peer})
-        self.peers_and_threads.append((peer, thread))
+        self.threads.update({peer.peer_id: thread})
 
         thread.start()
         return peer.peer_id
@@ -101,29 +101,28 @@ class User:
 
 
         self.peers.update({peer.peer_id: peer})
-        self.peers_and_threads.append((peer, thread))
+        self.threads.update({peer.peer_id: thread})
 
         thread.start()
         return peer.peer_id
 
 
     def stop(self, peer_id):
-        for peer_id, thread in self.peers_and_threads:
-            if peer_id == id:
-                thread.join()
-                self.peers_and_threads.remove((id, thread))
-
         self.peers[peer_id].stop()
         self.peers.pop(peer_id)
 
+        self.threads[peer_id].join()
+        self.threads.pop(peer_id)
+
     def stop_all(self):
-        for peer_id, thread in self.peers_and_threads:
-            thread.join()
-            self.peers_and_threads.remove((peer_id, thread))
 
         for peer_id in self.peers:
             self.peers[peer_id].stop()
             self.peers.pop(peer_id)
+
+        for peer_id in self.threads:
+            self.threads[peer_id].join()
+            self.threads.pop(peer_id)
 
 
     def _input_directory(self, dir_path, file_manager):
