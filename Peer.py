@@ -18,7 +18,7 @@ EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 class Peer:
     def __init__(self, peer_ip, peer_port, info, file_manager):
         self.peer_id = self.generate_peer_id()
-        print(f"{len(self.peer_id)} bytes")
+
         self.peer_ip = peer_ip
         self.peer_port = peer_port
 

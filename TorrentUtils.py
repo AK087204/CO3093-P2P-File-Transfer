@@ -91,17 +91,3 @@ class TorrentUtils:
             + '&dn=' + urllib.parse.quote(name) \
             + tracker_params \
             + '&xl=' + str(total_length)
-
-
-
-if __name__ == '__main__':
-    torrent_file_path = 'Torrents/1_novel.torrent'
-    # piece_file_map = TorrentUtils.build_piece_file_map_from_torrent(torrent_file_path)
-    #
-    # # In ra kết quả
-    # for piece_index, mappings in enumerate(piece_file_map):
-    #     print(f"Piece {piece_index}:")
-    #     for mapping in mappings:
-    #         print(f"  File: {mapping['file']}, Offset: {mapping['offset']}, Length: {mapping['length']}")
-
-    print(TorrentUtils.get_info_from_file(torrent_file_path))
