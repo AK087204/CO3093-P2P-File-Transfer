@@ -43,3 +43,113 @@
 2024-11-09 16:51:49,396 - INFO - Started downloading Presentation.pdf.torrent
 2024-11-09 16:51:56,458 - INFO - Disconnected peer: -PY0001-6gZIR4GJMEJX
 2024-11-09 16:52:02,502 - INFO - Disconnected peer: -PY0001-o1Dt3BI0dYIn
+2024-11-09 19:41:29,126 - INFO - User 1223 logged in successfully
+2024-11-09 19:41:30,018 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-09 19:42:07,289 - ERROR - Failed to scrape: [Errno 2] No such file or directory: ''
+2024-11-09 19:43:36,622 - INFO - Started sharing Presentation.pdf
+2024-11-09 19:43:55,861 - INFO - Started scraping 1123013.jpg.torrent
+2024-11-09 19:44:15,236 - ERROR - Failed to disconnect peer: [WinError 10061] No connection could be made because the target machine actively refused it
+2024-11-09 19:44:20,091 - ERROR - Failed to disconnect peer: [WinError 10061] No connection could be made because the target machine actively refused it
+2024-11-09 19:49:10,124 - INFO - User 11123 logged in successfully
+2024-11-09 19:49:10,930 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-09 19:49:34,924 - INFO - Started sharing UC_1_logout.drawio
+2024-11-09 19:50:17,276 - INFO - Started sharing 0_NCKH_ThayHoai
+2024-11-09 19:50:34,272 - INFO - User 22234 logged in successfully
+2024-11-09 19:50:34,694 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-09 19:50:54,431 - INFO - Started scraping 0_NCKH_ThayHoai.torrent
+2024-11-09 19:51:37,771 - INFO - Disconnected peer: -PY0001-rinyqqnaT4rE
+2024-11-09 19:52:43,741 - INFO - Started sharing DSC_2729 copy.jpg
+2024-11-09 19:52:55,570 - ERROR - Failed to scrape: [Errno 2] No such file or directory: ''
+2024-11-09 19:53:04,929 - INFO - Disconnected peer: -PY0001-ejP2eU1oenui
+2024-11-09 19:53:19,401 - INFO - Started scraping DSC_2729 copy.jpg.torrent
+2024-11-09 19:53:42,174 - INFO - Started downloading DSC_2729 copy.jpg.torrent
+2024-11-09 19:54:00,347 - INFO - Disconnected peer: -PY0001-SSu70o30onNG
+2024-11-09 19:54:29,121 - INFO - Started sharing Presentation.pdf
+2024-11-09 19:54:43,962 - INFO - Started downloading Presentation.pdf.torrent
+2024-11-09 19:54:57,105 - INFO - Disconnected peer: -PY0001-tq2MaWQjOxU6
+2024-11-09 19:55:06,294 - INFO - Disconnected peer: -PY0001-8XvWbppURmoa
+2024-11-09 19:55:07,729 - INFO - Disconnected peer: -PY0001-t4l0GTERlHmj
+2024-11-09 19:55:08,839 - INFO - Disconnected peer: -PY0001-HmBdnXERRZId
+2024-11-09 19:55:12,239 - INFO - Disconnected peer: -PY0001-ZWGw3EjS9IIJ
+2024-11-10 09:57:17,197 - INFO - User ee logged in successfully
+2024-11-10 09:57:18,127 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:13:24,779 - INFO - User 1234 logged in successfully
+2024-11-13 16:13:25,317 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:13:36,051 - INFO - User 2223 logged in successfully
+2024-11-13 16:13:36,879 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:13:54,848 - INFO - User 222222333 logged in successfully
+2024-11-13 16:13:55,400 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:15:49,661 - INFO - User jkjjijjiii logged in successfully
+2024-11-13 16:15:50,439 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:16:10,003 - INFO - Started sharing src
+2024-11-13 16:18:15,884 - INFO - User 222222222222333 logged in successfully
+2024-11-13 16:18:16,313 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:18:26,221 - INFO - Started sharing TestFolder
+2024-11-13 16:19:48,698 - INFO - User 222222233 logged in successfully
+2024-11-13 16:19:49,429 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:20:07,421 - INFO - Started sharing TestFolder
+2024-11-13 16:20:24,953 - INFO - User 111111111111111111122 logged in successfully
+2024-11-13 16:20:25,300 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:20:39,833 - INFO - User 22223344 logged in successfully
+2024-11-13 16:20:40,655 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:21:13,519 - INFO - Started downloading TestFolder.torrent
+2024-11-13 16:22:25,196 - INFO - User 223 logged in successfully
+2024-11-13 16:22:25,348 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:22:40,247 - INFO - Started sharing TestFolder
+2024-11-13 16:22:53,658 - INFO - User 2223333 logged in successfully
+2024-11-13 16:22:54,219 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:22:55,221 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:23:08,403 - INFO - Started downloading TestFolder.torrent
+2024-11-13 16:32:59,329 - INFO - User 12233 logged in successfully
+2024-11-13 16:32:59,502 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:33:41,315 - INFO - User 2233 logged in successfully
+2024-11-13 16:33:41,599 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:34:06,459 - INFO - Started sharing TestFolder
+2024-11-13 16:34:15,324 - INFO - User 223 logged in successfully
+2024-11-13 16:34:16,058 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:34:30,309 - INFO - Started downloading TestFolder.torrent
+2024-11-13 16:39:48,832 - INFO - User 1122 logged in successfully
+2024-11-13 16:39:49,069 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:40:42,929 - INFO - User 1223 logged in successfully
+2024-11-13 16:40:43,354 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:40:48,450 - INFO - Started sharing UC_3_3_2_View_Event_Progress.drawio
+2024-11-13 16:40:59,821 - INFO - User 223444 logged in successfully
+2024-11-13 16:41:00,702 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:41:07,254 - ERROR - Failed to add torrent: can only concatenate str (not "bytes") to str
+2024-11-13 16:48:24,368 - INFO - User 221 logged in successfully
+2024-11-13 16:48:25,346 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:48:33,325 - INFO - Started sharing UC_3_3_2_View_Event_Progress.drawio
+2024-11-13 16:48:41,664 - INFO - Started downloading UC_3_3_2_View_Event_Progress.drawio.torrent
+2024-11-13 16:48:52,767 - INFO - Disconnected peer: -PY0001-2zRoV8tPdzVC
+2024-11-13 16:48:57,794 - INFO - Disconnected peer: -PY0001-eUYZnIc0pKcI
+2024-11-13 16:49:17,947 - INFO - Started sharing TestFolder
+2024-11-13 16:49:28,973 - INFO - Started downloading TestFolder.torrent
+2024-11-13 16:49:50,189 - INFO - Disconnected peer: -PY0001-dpHtI98gxzZu
+2024-11-13 16:49:51,188 - INFO - Disconnected peer: -PY0001-IUsiiTN44Cz3
+2024-11-13 16:51:06,783 - INFO - User 213 logged in successfully
+2024-11-13 16:51:06,856 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:51:14,474 - INFO - Started sharing UC_3_3_general_event_management.drawio
+2024-11-13 16:51:23,560 - INFO - Started downloading UC_3_3_general_event_management.drawio.torrent
+2024-11-13 16:51:48,484 - INFO - Started sharing TestFolder
+2024-11-13 16:52:07,616 - INFO - User 2324 logged in successfully
+2024-11-13 16:52:08,321 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:52:32,222 - INFO - Started downloading TestFolder.torrent
+2024-11-13 16:56:51,909 - INFO - User 2334 logged in successfully
+2024-11-13 16:56:52,726 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:57:06,707 - INFO - Started sharing TestFolder
+2024-11-13 16:57:27,744 - INFO - User 124 logged in successfully
+2024-11-13 16:57:37,394 - INFO - Started sharing TestFolder
+2024-11-13 16:57:46,391 - INFO - User 124 logged in successfully
+2024-11-13 16:57:46,946 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:57:55,465 - INFO - Started downloading TestFolder.torrent
+2024-11-13 16:59:33,906 - INFO - User 124 logged in successfully
+2024-11-13 16:59:34,601 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 16:59:45,829 - INFO - Started sharing TestFolder
+2024-11-13 16:59:54,192 - INFO - User 244 logged in successfully
+2024-11-13 16:59:54,461 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 17:00:06,089 - INFO - Started downloading TestFolder.torrent
+2024-11-13 17:14:27,494 - INFO - User 12444 logged in successfully
+2024-11-13 17:14:28,192 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-13 17:14:44,178 - INFO - Started sharing TestFolder
+2024-11-13 17:14:53,252 - INFO - User 12444 logged in successfully
+2024-11-13 17:15:01,822 - INFO - Started downloading TestFolder.torrent

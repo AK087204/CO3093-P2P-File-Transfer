@@ -26,17 +26,25 @@ class FileManager:
             self.piece_file_map = self.build_piece_file_map_from_torrent(info)
             pieces = info[b'pieces']
             self.total_pieces = len(pieces) // 40
+            self.name = info[b'name'].decode('utf-8')
 
         else:
             self.piece_length = 524288
             self.total_length = 0
             self.piece_file_map = {}
             self.total_pieces = 0
+            self.name = ''
 
         if save_path:
-            self.save_path = save_path
+            if "." in os.path.basename(self.name):
+                self.save_path = save_path
+            else:
+                self.save_path = f'{save_path}/{self.name}'
         else:
-            self.save_path = 'download'
+            if os.path.isdir(self.name):
+                self.save_path = 'download'
+            else:
+                self.save_path = f'download/{self.name}'
         self.pieces = []
 
     def __len__(self):
@@ -191,8 +199,11 @@ class FileManager:
 
                 # Đảm bảo file buffer được mở và sẵn sàng để ghi
                 if file_name not in file_buffers:
-                    file_path = os.path.join(self.save_path, file_name)
-                    file_buffers[file_name] = open(file_path, 'wb')
+                    path = os.path.join(self.save_path, file_name)
+                    dir_path = os.path.dirname(path)
+                    if not os.path.exists(dir_path):
+                        os.makedirs(dir_path)
+                    file_buffers[file_name] = open(path, 'wb')
 
                 # Ghi dữ liệu của piece vào file đích tại vị trí offset
                 file_buffers[file_name].seek(offset)
