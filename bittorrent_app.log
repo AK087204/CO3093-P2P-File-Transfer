@@ -165,3 +165,20 @@
 2024-11-27 19:16:35,414 - INFO - Started sharing printer_data.txt
 2024-11-27 19:16:49,076 - INFO - User 2321 logged in successfully
 2024-11-27 19:16:49,818 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:17:10,584 - INFO - Started downloading printer_data.txt.torrent
+2024-11-27 19:22:12,196 - INFO - User 123123 logged in successfully
+2024-11-27 19:22:12,523 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:22:39,313 - INFO - Started downloading printer_data.txt.torrent
+2024-11-27 19:26:33,250 - INFO - User 1212 logged in successfully
+2024-11-27 19:26:33,312 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:26:43,464 - INFO - User 123123123123 logged in successfully
+2024-11-27 19:26:44,445 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:27:01,060 - INFO - Started sharing printer_data.txt
+2024-11-27 19:27:37,631 - INFO - Started downloading printer_data.txt.torrent
+2024-11-27 19:51:23,224 - INFO - User 123 logged in successfully
+2024-11-27 19:51:23,786 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:52:38,661 - INFO - User 123 logged in successfully
+2024-11-27 19:52:39,288 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:53:06,581 - INFO - User 123213 logged in successfully
+2024-11-27 19:53:07,255 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:53:20,421 - INFO - Started sharing thu_hn.jpg

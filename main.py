@@ -21,4 +21,24 @@ def main():
         user.stop_all()
     else:
         print("Invalid input")
-main()
+
+def print_setup_instructions():
+    print("""
+    === Important Setup Instructions ===
+    To connect with peers outside your network, you need to:
+    1. Forward port 6881 (TCP) on your router to your computer
+    2. Allow incoming connections to port 6881 in your firewall
+    
+    Router Port Forwarding Steps:
+    1. Access your router (usually http://192.168.1.1 or http://192.168.0.1)
+    2. Find Port Forwarding section (sometimes under Advanced Settings)
+    3. Add new rule:
+       - External Port: 6881
+       - Internal Port: 6881
+       - Protocol: TCP
+       - Internal IP: [Your Computer's Local IP]
+    """)
+
+if __name__ == "__main__":
+    print_setup_instructions()
+    main()

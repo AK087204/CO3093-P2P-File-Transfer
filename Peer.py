@@ -287,3 +287,25 @@ class Peer:
             except socket.timeout:
                 local_socket.close()
                 raise ConnectionError("Failed to establish connection")
+
+    def connect_to_peer(self, ip, port):
+        print(f"Attempting connection to {ip}:{port}")
+        try:
+            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            conn.settimeout(10)  # 10 second timeout
+            
+            # Try to bind to our specific port first
+            try:
+                conn.bind(('', self.peer_port))
+            except OSError as e:
+                print(f"Couldn't bind to port {self.peer_port}: {e}")
+                # Continue anyway as we might still be able to connect
+            
+            print(f"Connecting from local port {conn.getsockname()[1]}...")
+            conn.connect((ip, port))
+            print(f"Successfully connected to {ip}:{port}")
+            return conn
+        except Exception as e:
+            print(f"Connection failed to {ip}:{port}: {str(e)}")
+            print(f"Local socket was bound to: {conn.getsockname() if conn else 'unknown'}")
+            raise
