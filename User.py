@@ -145,7 +145,7 @@ class User:
         info = InfoMultiFile(piece_length, pieces, os.path.basename(dir_path), files)
 
         # Tạo MetaInfo cho torrent file
-        meta_info = MetaInfo(info, 'http://localhost:5050', datetime.now(), 'No comment', self.name)
+        meta_info = MetaInfo(info, 'http://74.178.89.23:5050', datetime.now(), 'No comment', self.name)
         encoded = meta_info.get_bencode()
 
         torrent_dir = "Torrents"
@@ -173,7 +173,7 @@ class User:
         info = InfoSingleFile(piece_length, pieces, file_name, file_size)
 
         # Tạo MetaInfo cho torrent file
-        meta_info = MetaInfo(info, 'http://localhost:5050', datetime.now(), 'No comment', self.name)
+        meta_info = MetaInfo(info, 'http://74.178.89.23:5050', datetime.now(), 'No comment', self.name)
         encoded = meta_info.get_bencode()
 
         torrent_dir = "Torrents"

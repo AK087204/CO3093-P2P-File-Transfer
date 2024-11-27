@@ -153,3 +153,15 @@
 2024-11-13 17:14:44,178 - INFO - Started sharing TestFolder
 2024-11-13 17:14:53,252 - INFO - User 12444 logged in successfully
 2024-11-13 17:15:01,822 - INFO - Started downloading TestFolder.torrent
+2024-11-27 19:08:17,473 - INFO - User 123 logged in successfully
+2024-11-27 19:08:17,602 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:08:31,423 - INFO - User 234 logged in successfully
+2024-11-27 19:08:31,795 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:08:45,192 - INFO - Started sharing DB.txt
+2024-11-27 19:09:19,540 - INFO - Started downloading DB.txt.torrent
+2024-11-27 19:15:29,461 - INFO - User 123 logged in successfully
+2024-11-27 19:15:30,083 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-27 19:16:17,233 - INFO - User 123 logged in successfully
+2024-11-27 19:16:35,414 - INFO - Started sharing printer_data.txt
+2024-11-27 19:16:49,076 - INFO - User 2321 logged in successfully
+2024-11-27 19:16:49,818 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable

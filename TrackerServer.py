@@ -5,7 +5,7 @@ from typing import Dict, List, Optional
 import uuid
 import threading
 class TrackerServer:
-    def __init__(self, host: str = 'localhost', port: int = 5050):
+    def __init__(self, host: str = '0.0.0.0', port: int = 5050):
         self.host = host
         self.port = port
         self.peers: Dict[str, List[Dict[str, str]]] = {}  # {info_hash: [peer_info, ...]}

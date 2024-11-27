@@ -18,16 +18,20 @@ EVENT_STATE = ['STARTED', 'STOPPED', 'COMPLETED']
 class Peer:
     def __init__(self, peer_ip, peer_port, info, file_manager):
         self.peer_id = self.generate_peer_id()
-
+        self.peer_port = peer_port  # Use the same port consistently
         self.peer_ip = peer_ip
-        self.peer_port = peer_port
 
         self.info_hash = info['info_hash']
         self.total_length = info['length']
         self.name = info['name']
         self.trackers = info['trackers']
 
-        self.peer_server = PeerServer(self.peer_id, peer_ip, peer_port, self.info_hash)
+        self.peer_server = PeerServer(
+            peer_id=self.peer_id,
+            peer_ip=self.peer_ip,  # Use local IP for UPnP mapping
+            peer_port=self.peer_port,  # Same port as listening port
+            info_hash=self.info_hash
+        )
 
         self.is_running = False
         self.peer_handlers: dict[(str, int), PeerHandler] = {}
@@ -71,16 +75,20 @@ class Peer:
             if ip == self.peer_ip and port == self.peer_port:
                 continue
 
-            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            conn.connect((ip, port))
-            peer_handler = PeerHandler(conn, (ip, port), self.info_hash, self.peer_id, self.callback)
-            thread = Thread(target=peer_handler.run)
+            print(f"Attempting to connect to peer at {ip}:{port} (my port: {self.peer_port})")
+            try:
+                conn = self.establish_connection(ip, port)
+                peer_handler = PeerHandler(conn, (ip, port), self.info_hash, self.peer_id, self.callback)
+                thread = Thread(target=peer_handler.run)
 
-            with self.lock:
-                self.peer_handlers.update({(ip, port): peer_handler})
-                self.threads.update({(ip, port): thread})
+                with self.lock:
+                    self.peer_handlers.update({(ip, port): peer_handler})
+                    self.threads.update({(ip, port): thread})
 
-                thread.start()
+                    thread.start()
+            except (socket.timeout, ConnectionRefusedError) as e:
+                print(f"Failed to connect to peer {ip}:{port} - {str(e)}")
+                continue
 
 
     def upload(self):
@@ -199,8 +207,12 @@ class Peer:
             self.peer_server_thread.start()
 
     def listen(self):
+        print(f"Starting to listen on port: {self.peer_port}")
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind(('0.0.0.0', self.peer_port))
+        # Allow port reuse
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Bind to all interfaces
+        server_socket.bind(('', self.peer_port))  # Empty string means all interfaces
         server_socket.listen(5)
         server_socket.settimeout(1)  # Đặt timeout cho socket
 
@@ -254,3 +266,24 @@ class Peer:
     def get_transfer_information(self):
         progress = len(self.file_manager)/ self.file_manager.get_total_pieces() * 100
         return {"progress": progress, "peers": len(self.peer_handlers), "speed": 0}
+
+    def establish_connection(self, remote_ip, remote_port):
+        """Attempt to establish connection using hole punching"""
+        local_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        local_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        local_socket.bind(('', self.peer_port))
+        
+        # Try to connect
+        try:
+            local_socket.connect((remote_ip, remote_port))
+            return local_socket
+        except ConnectionRefusedError:
+            # If connection fails, try listening
+            local_socket.listen(1)
+            try:
+                local_socket.settimeout(10)
+                conn, addr = local_socket.accept()
+                return conn
+            except socket.timeout:
+                local_socket.close()
+                raise ConnectionError("Failed to establish connection")
