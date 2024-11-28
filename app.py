@@ -10,6 +10,7 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 import json as js
+import time
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -44,6 +45,7 @@ class TransferRecord:
     progress: float = 0.0
     peers: int = 0
     speed: float = 0.0
+    elapsed_time: str = "00:00:00"
 
 
 class BitTorrentApp:
@@ -387,14 +389,8 @@ class BitTorrentApp:
             command=self.add_torrent
         ).pack(side="left", padx=2)
 
-        # ttk.Button(
-        #     toolbar,
-        #     text="Add Magnet",
-        #     command=self.add_magnet
-        # ).pack(side="left", padx=2)
-
         # Transfers table
-        columns = ("Name", "Status", "Progress", "Speed", "Peers")
+        columns = ("Name", "Status", "Progress", "Speed", "Peers", "Time")
         self.transfers_tree = ttk.Treeview(
             frame,
             columns=columns,
@@ -730,6 +726,43 @@ class BitTorrentApp:
             # Add current transfers
             for transfer in self.transfers.values():
                 value = self.user.get_transfer_information(transfer.id)
+                
+                # Calculate elapsed time only if transfer is not complete
+                if value['progress'] >= 100.0 and transfer.completion_time is None:
+                    transfer.completion_time = datetime.now()
+                    transfer.status = TransferStatus.COMPLETED
+                
+                if transfer.completion_time:
+                    # Use the final elapsed time for completed transfers
+                    elapsed = transfer.completion_time - transfer.start_time
+                    speed = 0.0  # Speed is 0 for completed transfers
+                else:
+                    # Calculate current elapsed time and speed for ongoing transfers
+                    elapsed = datetime.now() - transfer.start_time
+                    # Calculate speed based on progress change over time
+                    current_time = time.time()
+                    if not hasattr(transfer, 'last_progress_check'):
+                        transfer.last_progress_check = current_time
+                        transfer.last_progress = value['progress']
+                        speed = 0.0
+                    else:
+                        time_diff = current_time - transfer.last_progress_check
+                        if time_diff >= 1.0:  # Update speed every second
+                            progress_diff = value['progress'] - transfer.last_progress
+                            # Convert progress difference to bytes and then to KB/s
+                            bytes_transferred = (progress_diff / 100.0) * self.user.get_file_size(transfer.id)
+                            speed = (bytes_transferred / 1024) / time_diff
+                            transfer.last_progress_check = current_time
+                            transfer.last_progress = value['progress']
+                        else:
+                            speed = getattr(transfer, 'current_speed', 0.0)
+                    transfer.current_speed = speed
+                
+                hours = int(elapsed.total_seconds() // 3600)
+                minutes = int((elapsed.total_seconds() % 3600) // 60)
+                seconds = int(elapsed.total_seconds() % 60)
+                elapsed_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                
                 self.transfers_tree.insert(
                     "",
                     "end",
@@ -737,8 +770,9 @@ class BitTorrentApp:
                         os.path.basename(transfer.path),
                         transfer.status.value,
                         f"{value['progress']:.1f}%",
-                        f"{value['speed']:.1f} KB/s",
-                        value['peers'] + 1
+                        f"{transfer.current_speed:.1f} KB/s",  # Display speed in KB/s
+                        value['peers'] + 1,
+                        elapsed_str
                     )
                 )
         except Exception as e:

@@ -1,4 +1,3 @@
-
 from datetime import datetime
 import os
 
@@ -239,3 +238,8 @@ class User:
 
     def get_scrape_information(self, peer_id):
         return self.peers[peer_id].get_scrape_response()
+
+    def get_file_size(self, transfer_id):
+        """Get the total file size for a transfer"""
+        # Return the file size in bytes
+        return self.peers[transfer_id].total_length
