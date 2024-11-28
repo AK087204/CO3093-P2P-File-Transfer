@@ -739,29 +739,38 @@ class BitTorrentApp:
                 else:
                     # Calculate current elapsed time and speed for ongoing transfers
                     elapsed = datetime.now() - transfer.start_time
-                    # Calculate speed based on progress change over time
-                    current_time = time.time()
+                    
+                    # Initialize speed tracking attributes if they don't exist
                     if not hasattr(transfer, 'last_progress_check'):
-                        transfer.last_progress_check = current_time
+                        transfer.last_progress_check = time.time()
                         transfer.last_progress = value['progress']
-                        speed = 0.0
-                    else:
-                        time_diff = current_time - transfer.last_progress_check
-                        if time_diff >= 1.0:  # Update speed every second
+                        transfer.current_speed = 0.0
+                    
+                    # Calculate speed
+                    current_time = time.time()
+                    time_diff = current_time - transfer.last_progress_check
+                    
+                    if time_diff >= 1.0:  # Update speed every second
+                        try:
                             progress_diff = value['progress'] - transfer.last_progress
                             # Convert progress difference to bytes and then to KB/s
                             bytes_transferred = (progress_diff / 100.0) * self.user.get_file_size(transfer.id)
-                            speed = (bytes_transferred / 1024) / time_diff
-                            transfer.last_progress_check = current_time
-                            transfer.last_progress = value['progress']
-                        else:
-                            speed = getattr(transfer, 'current_speed', 0.0)
-                    transfer.current_speed = speed
+                            transfer.current_speed = (bytes_transferred / 1024) / time_diff
+                        except (AttributeError, TypeError):
+                            # If there's any error calculating speed, use 0
+                            transfer.current_speed = 0.0
+                        
+                        # Update progress tracking
+                        transfer.last_progress_check = current_time
+                        transfer.last_progress = value['progress']
                 
                 hours = int(elapsed.total_seconds() // 3600)
                 minutes = int((elapsed.total_seconds() % 3600) // 60)
                 seconds = int(elapsed.total_seconds() % 60)
                 elapsed_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                
+                # Get speed value safely
+                speed_value = getattr(transfer, 'current_speed', 0.0)
                 
                 self.transfers_tree.insert(
                     "",
@@ -770,14 +779,13 @@ class BitTorrentApp:
                         os.path.basename(transfer.path),
                         transfer.status.value,
                         f"{value['progress']:.1f}%",
-                        f"{transfer.current_speed:.1f} KB/s",  # Display speed in KB/s
+                        f"{speed_value:.1f} KB/s",  # Display speed in KB/s
                         value['peers'] + 1,
                         elapsed_str
                     )
                 )
         except Exception as e:
             logging.error(f"Failed to update transfers view: {e}")
-
     def disconnect_peer(self):
         """Disconnect selected peer"""
         try:

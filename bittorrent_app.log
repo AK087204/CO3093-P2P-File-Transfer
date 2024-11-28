@@ -378,3 +378,16 @@
 2024-11-28 10:44:58,976 - ERROR - Failed to update transfers view: 'TransferRecord' object has no attribute 'current_speed'
 2024-11-28 10:44:59,988 - ERROR - Failed to update transfers view: 'TransferRecord' object has no attribute 'current_speed'
 2024-11-28 10:45:00,989 - ERROR - Failed to update transfers view: 'TransferRecord' object has no attribute 'current_speed'
+2024-11-28 11:04:17,062 - INFO - User ádá logged in successfully
+2024-11-28 11:04:17,133 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-28 11:04:23,743 - INFO - User ádsd logged in successfully
+2024-11-28 11:04:24,239 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-28 11:05:01,575 - INFO - Started sharing Lab
+2024-11-28 11:05:30,779 - INFO - Started downloading Lab.torrent
+2024-11-28 11:06:01,541 - INFO - User ádasd logged in successfully
+2024-11-28 11:06:02,083 - ERROR - Failed to update status bar: 'NoneType' object is not subscriptable
+2024-11-28 11:06:07,978 - INFO - User ádasd logged in successfully
+2024-11-28 11:06:33,990 - INFO - Started sharing TN01-KT
+2024-11-28 11:06:49,047 - INFO - Started downloading TN01-KT.torrent
+2024-11-28 11:07:07,045 - INFO - Started sharing ideaIU-2024.2.1.exe
+2024-11-28 11:07:43,004 - INFO - Started downloading ideaIU-2024.2.1.exe.torrent
